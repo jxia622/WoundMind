@@ -55,33 +55,35 @@ flowchart LR
 
 The core agent path is deterministic and auditable: WoundMind classifies the condition, routes condition-aware tools such as segmentation and depth, drafts candidate findings, verifies the assessment against retrieved evidence, and returns either a report or escalation recommendation.
 
-### Verification Agent Design
+### Verification Agent System Design
+
+This diagram shows the intended verification-agent system design, not a line-by-line code execution trace.
 
 ```mermaid
 flowchart LR
-    A["Model proposes<br/>condition + stage"]:::claim
-    B["Agent gathers<br/>clinical evidence"]:::evidence
-    C["Verifier compares<br/>claim vs evidence"]:::compare
-    D{"Is the claim<br/>supported?"}:::decision
-    E["Supported<br/>include citation"]:::pass
-    F["Unclear or unsupported<br/>flag for review"]:::warn
-    G["Final report<br/>or escalation"]:::output
+    A["Model proposes<br/>condition + stage"]:::model
+    B["VLM extracts<br/>visual evidence"]:::vlm
+    C["Diagnostic agent<br/>builds assessment"]:::agent
+    D["Evaluator checks<br/>reasoning + evidence"]:::eval
+    E["PubMed literature<br/>search MCP"]:::mcp
+    F["Final report<br/>or escalation"]:::output
 
-    A --> B --> C --> D
-    D -->|Yes| E --> G
-    D -->|No / unsure| F --> G
+    A --> B --> C
+    C <--> D
+    C <--> E
+    D --> F
+    C --> F
 
-    classDef claim fill:#eaf4ff,stroke:#378add,stroke-width:2px,color:#0f172a;
-    classDef evidence fill:#eefdf8,stroke:#21a67a,stroke-width:2px,color:#0f172a;
-    classDef compare fill:#fff7e6,stroke:#f2a93b,stroke-width:2px,color:#0f172a;
-    classDef decision fill:#f4f0ff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a;
-    classDef pass fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#0f172a;
-    classDef warn fill:#fff0f3,stroke:#e85d75,stroke-width:2px,color:#0f172a;
+    classDef model fill:#eaf4ff,stroke:#378add,stroke-width:2px,color:#0f172a;
+    classDef vlm fill:#eefdf8,stroke:#21a67a,stroke-width:2px,color:#0f172a;
+    classDef agent fill:#fff7e6,stroke:#f2a93b,stroke-width:2px,color:#0f172a;
+    classDef eval fill:#fff0f3,stroke:#e85d75,stroke-width:2px,color:#0f172a;
+    classDef mcp fill:#f4f0ff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a;
     classDef output fill:#f3f4f6,stroke:#64748b,stroke-width:2px,color:#0f172a;
     linkStyle 0,1,2,3,4,5 stroke:#94a3b8,stroke-width:2px;
 ```
 
-The verification agent does not make a new diagnosis. It checks whether the model's proposed condition and stage are supported by retrieved clinical evidence; supported claims get cited in the report, while unclear or unsupported claims are flagged for clinician review.
+The verification agent uses the model's proposed condition and stage as a starting point, asks a VLM to extract visual findings, and then has the diagnostic agent and evaluator iterate until the claim is supported or flagged. The agent is designed to query a PubMed literature-search MCP for external evidence, and unsupported or uncertain cases are escalated instead of being presented as final diagnoses.
 
 ## Repository Layout
 
