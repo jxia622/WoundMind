@@ -34,34 +34,26 @@ WoundMind is a research prototype. It is not a medical device and is not for cli
 ## Agent Workflow
 
 ```mermaid
-flowchart TB
-    subgraph UI["Static demo: one-way review workflow"]
-        A["Upload wound image"] --> B["Verify image quality"]
-        B --> C["Classify condition"]
-        C --> D["Condition dropdown override"]
-        D --> E{"DFU or pressure injury?"}
-        E -- "No" --> F["Stop after classification<br/>Other condition tools not built yet"]
-        E -- "Yes" --> G["Generate U-Net++ mask"]
-        G --> H["Show blue mask overlay<br/>on original image"]
-        E -- "Yes" --> I["Generate Depth Anything V2 map"]
-        I --> J["Show depth map beside legend"]
-        H --> K["Run full agent evaluation"]
-        J --> K
-    end
+flowchart LR
+    A["Wound image"]:::input
+    B["Condition<br/>classification"]:::model
+    C["Condition-aware<br/>tool orchestration"]:::agent
+    D["Candidate diagnosis<br/>+ visual findings"]:::finding
+    E["Evidence verification<br/>agent"]:::verify
+    F["Report or<br/>escalation"]:::output
 
-    subgraph Agent["WoundMindAgent evaluation"]
-        K --> L["Load condition policy<br/>and tool plan"]
-        L --> M["Retrieve clinical references"]
-        M --> N["Run segmentation and depth tools"]
-        N --> O["Route DFU/PI severity model"]
-        O --> P["Simulated clinician Q&A"]
-        P --> Q["Verifier checks draft staging<br/>against retrieved evidence"]
-        Q --> R["Final stage, probabilities,<br/>brief report, trace, evidence count"]
-        R --> S["Log case artifacts"]
-    end
+    A --> B --> C --> D --> E --> F
+
+    classDef input fill:#eaf4ff,stroke:#378add,stroke-width:2px,color:#0f172a;
+    classDef model fill:#eefdf8,stroke:#21a67a,stroke-width:2px,color:#0f172a;
+    classDef agent fill:#fff7e6,stroke:#f2a93b,stroke-width:2px,color:#0f172a;
+    classDef finding fill:#f4f0ff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a;
+    classDef verify fill:#fff0f3,stroke:#e85d75,stroke-width:2px,color:#0f172a;
+    classDef output fill:#f3f4f6,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    linkStyle 0,1,2,3,4 stroke:#94a3b8,stroke-width:2px;
 ```
 
-The core agent path is deterministic and auditable. When `OPENAI_API_KEY` is set, the verifier can use OpenAI through the same interface; otherwise WoundMind falls back to deterministic local verification.
+The core agent path is deterministic and auditable: WoundMind classifies the condition, routes condition-aware tools such as segmentation and depth, drafts candidate findings, verifies the assessment against retrieved evidence, and returns either a report or escalation recommendation.
 
 ## Repository Layout
 
