@@ -55,6 +55,39 @@ flowchart LR
 
 The core agent path is deterministic and auditable: WoundMind classifies the condition, routes condition-aware tools such as segmentation and depth, drafts candidate findings, verifies the assessment against retrieved evidence, and returns either a report or escalation recommendation.
 
+### Verification Agent Design
+
+```mermaid
+flowchart LR
+    A["Draft assessment<br/>condition + severity + rationale"]:::draft
+    B["Policy-filtered<br/>clinical evidence retrieval"]:::retrieve
+    C["Evidence packet<br/>source + section + text chunks"]:::evidence
+    D{"Verifier mode"}:::decision
+    E["OpenAI staging audit<br/>JSON: PASS / FAIL / UNCERTAIN"]:::llm
+    F["Deterministic fallback<br/>stage-term matching"]:::local
+    G["Verifier result<br/>citation + flags"]:::result
+    H["Final report or<br/>clinician escalation"]:::output
+
+    A --> B --> C --> D
+    D -->|OpenAI key configured| E
+    D -->|No key / local mode| F
+    E --> G
+    F --> G
+    G --> H
+
+    classDef draft fill:#eef2ff,stroke:#6366f1,stroke-width:2px,color:#0f172a;
+    classDef retrieve fill:#ecfeff,stroke:#0891b2,stroke-width:2px,color:#0f172a;
+    classDef evidence fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#0f172a;
+    classDef decision fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#0f172a;
+    classDef llm fill:#fdf2f8,stroke:#db2777,stroke-width:2px,color:#0f172a;
+    classDef local fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    classDef result fill:#fff1f2,stroke:#e11d48,stroke-width:2px,color:#0f172a;
+    classDef output fill:#f3f4f6,stroke:#475569,stroke-width:2px,color:#0f172a;
+    linkStyle 0,1,2,3,4,5,6,7 stroke:#94a3b8,stroke-width:2px;
+```
+
+The verifier is scoped to audit support for the drafted stage, not to make an independent diagnosis. It returns `PASS`, `FAIL`, or `UNCERTAIN` with a short citation or flag; uncertain results suppress the staging recommendation and route the case toward clinician review.
+
 ## Repository Layout
 
 ```text
