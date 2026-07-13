@@ -5,7 +5,7 @@
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](#run-locally)
 [![Status](https://img.shields.io/badge/status-research%20prototype-orange)](#safety-note)
 
-WoundMind is a diagnostic assistant agent for wound assessment research. It combines image-model tools, human-in-the-loop review, clinical policy routing, and reference retrieval into a traceable workflow for diabetic foot ulcers, pressure injuries, and related skin/wound conditions.
+WoundMind is a diagnostic assistant agent for wound assessment research. The current demo runs a one-way image workflow: verify image quality, classify the wound condition with an override dropdown, show a light-blue segmentation overlay beside a relative depth map, then run a traceable full-agent evaluation for DFU and pressure-injury staging.
 
 ## Demo
 
@@ -13,7 +13,7 @@ WoundMind is a diagnostic assistant agent for wound assessment research. It comb
 
 [Watch the WoundMind DFU Grade 3 demo](docs/assets/woundmind_dfu_grade3_demo.webm)
 
-The demo uses a diabetic foot ulcer image and shows the local UI returning a DFU condition prediction, Grade 3 severity result, confidence/probability summaries, and the segmentation/depth review screen.
+The demo uses a diabetic foot ulcer image and shows the local UI returning a DFU condition prediction, Grade 3 severity result, confidence/probability summaries, a blue segmentation overlay on the original wound image, a side-by-side depth map, and a full diagnostic-agent trace with retrieved evidence and verifier output.
 
 ## Safety Note
 
@@ -24,31 +24,44 @@ WoundMind is a research prototype. It is not a medical device and is not for cli
 | Capability | Current implementation |
 | --- | --- |
 | Condition triage | ConvNeXt-Tiny classifier over 18 wound/skin condition classes |
-| Wound localization | U-Net++ segmentation wrapper with mask preview and mask-area summary |
-| Depth signal | Depth Anything V2 relative-depth wrapper with ROI-aware previews |
+| Wound localization | U-Net++ segmentation wrapper with light-blue mask overlay on the original wound image and mask-area summary |
+| Depth signal | Depth Anything V2 relative-depth wrapper shown side-by-side with the segmentation overlay |
 | Severity routing | DFU and pressure-injury severity model selection across RGB, mask, depth, and combined inputs |
-| Agent orchestration | Tool planner, policy registry, verifier state, case logger, simulated clinician Q&A |
+| Agent orchestration | Full diagnostic-agent run with tool planner, policy registry, retrieval, verifier, trace steps, case logger, and simulated clinician Q&A |
 | Clinical grounding | Local clinical reference index plus condition-gated retrieval policy |
-| Human review | Streamlit workflow and static browser prototype for accepting or overriding model outputs |
+| Human review | Static browser prototype and Streamlit workflow for condition override, visual review, and final agent output inspection |
 
 ## Agent Workflow
 
 ```mermaid
-flowchart LR
-    A["Upload wound image"] --> B["Validate image quality"]
-    B --> C["Classify condition"]
-    C --> D["Load condition policy"]
-    D --> E["Run tool plan"]
-    E --> F["Segment wound"]
-    E --> G["Estimate depth"]
-    F --> H["Route severity model"]
-    G --> H
-    H --> I["Retrieve clinical references"]
-    I --> J["Verify and summarize assessment"]
-    J --> K["Log case artifacts and feedback"]
+flowchart TB
+    subgraph UI["Static demo: one-way review workflow"]
+        A["Upload wound image"] --> B["Verify image quality"]
+        B --> C["Classify condition"]
+        C --> D["Condition dropdown override"]
+        D --> E{"DFU or pressure injury?"}
+        E -- "No" --> F["Stop after classification<br/>Other condition tools not built yet"]
+        E -- "Yes" --> G["Generate U-Net++ mask"]
+        G --> H["Show blue mask overlay<br/>on original image"]
+        E -- "Yes" --> I["Generate Depth Anything V2 map"]
+        I --> J["Show depth map beside legend"]
+        H --> K["Run full agent evaluation"]
+        J --> K
+    end
+
+    subgraph Agent["WoundMindAgent evaluation"]
+        K --> L["Load condition policy<br/>and tool plan"]
+        L --> M["Retrieve clinical references"]
+        M --> N["Run segmentation and depth tools"]
+        N --> O["Route DFU/PI severity model"]
+        O --> P["Simulated clinician Q&A"]
+        P --> Q["Verifier checks draft staging<br/>against retrieved evidence"]
+        Q --> R["Final stage, probabilities,<br/>brief report, trace, evidence count"]
+        R --> S["Log case artifacts"]
+    end
 ```
 
-The agent can run deterministically without an LLM key. OpenAI-backed brain/verifier paths are configured behind the same interface for later expansion.
+The core agent path is deterministic and auditable. When `OPENAI_API_KEY` is set, the verifier can use OpenAI through the same interface; otherwise WoundMind falls back to deterministic local verification.
 
 ## Repository Layout
 

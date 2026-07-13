@@ -1,8 +1,9 @@
-# WoundMind UI
+# WoundMind Static Demo
 
-Two-page wound analysis interface connected to the local FastAPI model pipeline.
-It runs condition classification, segmentation, full-frame depth preview, and
-routed DFU/pressure-injury severity inference.
+One-way wound analysis interface connected to the local FastAPI model pipeline.
+It verifies image quality, classifies the condition, allows condition override,
+shows a light-blue segmentation overlay beside the depth map, and then runs the
+full WoundMind agent evaluation for supported DFU/pressure-injury routes.
 
 ## Run locally
 
