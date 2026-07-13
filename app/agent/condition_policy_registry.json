@@ -1,0 +1,998 @@
+{
+  "version": "2026-06-28",
+  "purpose": "Condition-gated tool and retrieval policy for the WoundMind agent.",
+  "implemented_tool_ids": [
+    "open_wound_segmentation",
+    "relative_depth_map"
+  ],
+  "tools": {
+    "open_wound_segmentation": {
+      "implementation_status": "implemented",
+      "runtime_tool": "segment_wound",
+      "implementation": "Current U-Net++ open wound segmentation model.",
+      "feature_outputs": [
+        "mask_available",
+        "mask_area_pixels",
+        "mask_fraction",
+        "open_wound_roi"
+      ],
+      "best_for_conditions": [
+        "pressure_injury",
+        "dfu",
+        "vlu",
+        "burn_wounds"
+      ],
+      "limitations": [
+        "Designed for open wound masks, not closed rashes, pigment disorders, or lesion counting.",
+        "Mask is not a tissue exposure classifier."
+      ]
+    },
+    "relative_depth_map": {
+      "implementation_status": "implemented",
+      "runtime_tool": "depth_map",
+      "implementation": "Depth Anything V2 relative depth map, optionally guided by the wound mask ROI.",
+      "feature_outputs": [
+        "relative_depth",
+        "depth_preview",
+        "roi"
+      ],
+      "best_for_conditions": [
+        "pressure_injury",
+        "dfu"
+      ],
+      "limitations": [
+        "Provides relative visual depth, not calibrated physical depth.",
+        "Cannot confirm exposed bone, undermining, tunneling, perfusion, infection, or osteomyelitis."
+      ]
+    },
+    "tissue_exposure_classifier": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as a future model for visible fat, tendon, muscle, or bone exposure."
+      ]
+    },
+    "necrosis_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as a future tissue classifier for eschar or necrotic tissue."
+      ]
+    },
+    "perfusion_proxy": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "RGB image alone cannot reliably confirm perfusion or ischemia."
+      ]
+    },
+    "serial_area_change": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires longitudinal image alignment and measurement history."
+      ]
+    },
+    "exudate_detection": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future drainage or moisture classifier."
+      ]
+    },
+    "redness_estimator": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Color and erythema cues may be present in the classifier network but are not exposed as a standalone calibrated tool."
+      ]
+    },
+    "body_area_segmentation": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires body-region mapping before estimating body surface area."
+      ]
+    },
+    "scratch_texture_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future excoriation or lichenification feature extractor."
+      ]
+    },
+    "blister_crust_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future vesicle, blister, crust, or erosion detector."
+      ]
+    },
+    "scale_texture_analyzer": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future scaling and plaque texture feature extractor."
+      ]
+    },
+    "region_mapping": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires anatomical region localization."
+      ]
+    },
+    "lesion_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future lesion counting detector."
+      ]
+    },
+    "papule_pustule_nodule_classifier": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future acne lesion subtype classifier."
+      ]
+    },
+    "abscess_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future HS abscess detector."
+      ]
+    },
+    "sinus_tract_scar_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Sinus tracts and tunnels usually need clinical confirmation beyond a single RGB image."
+      ]
+    },
+    "blister_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future blister feature extractor."
+      ]
+    },
+    "affected_area_estimator": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires calibrated body region or lesion area estimation."
+      ]
+    },
+    "plaque_segmentation": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "The current U-Net++ open wound model should not be reused as psoriasis plaque segmentation."
+      ]
+    },
+    "thickness_proxy": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "RGB-based thickness is only a proxy and needs validation."
+      ]
+    },
+    "color_analysis": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Classifier color cues are not currently exposed as a structured standalone tool."
+      ]
+    },
+    "swelling_estimator": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Swelling assessment is not reliable from one uncalibrated RGB view."
+      ]
+    },
+    "serial_comparison": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires prior images and stable comparison protocol."
+      ]
+    },
+    "pigment_segmentation": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future pigmentation area model."
+      ]
+    },
+    "color_index": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires calibrated color normalization."
+      ]
+    },
+    "facial_distribution_mapping": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires facial landmark and region mapping."
+      ]
+    },
+    "vessel_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future telangiectasia detector."
+      ]
+    },
+    "gap_width_estimator": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires calibrated scale or reliable geometric reference."
+      ]
+    },
+    "incision_segmentation": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "The current open wound mask is not validated for incision-line segmentation."
+      ]
+    },
+    "desquamation_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future dry or moist desquamation detector."
+      ]
+    },
+    "ulcer_necrosis_detector": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Leave as future ulceration and necrosis classifier."
+      ]
+    },
+    "burn_segmentation": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "The current open wound mask is not a validated burn boundary model."
+      ]
+    },
+    "burn_depth_classifier": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Burn depth cannot be reliably inferred by the current relative depth map."
+      ]
+    },
+    "tbsa_estimator": {
+      "implementation_status": "not_implemented",
+      "runtime_tool": null,
+      "limitations": [
+        "Requires body surface area localization and clinical measurement protocol."
+      ]
+    }
+  },
+  "conditions": [
+    {
+      "condition_id": "healthy_normal_skin",
+      "condition_name": "Healthy / Normal Skin",
+      "classifier_labels": [
+        "Healthy_Normal_Skin"
+      ],
+      "aliases": [
+        "healthy skin",
+        "normal skin"
+      ],
+      "primary_severity_axes": [],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [],
+      "clinical_doc_ids": [],
+      "retrieval_filters": {
+        "condition": "healthy_normal_skin"
+      },
+      "output_schema": "no_wound_schema",
+      "limitations": [
+        "No severity staging framework is configured for normal skin."
+      ]
+    },
+    {
+      "condition_id": "pressure_injury",
+      "condition_name": "Pressure Injury",
+      "classifier_labels": [
+        "Pressure_Injury_(PI)"
+      ],
+      "aliases": [
+        "pressure injury",
+        "pressure injuries",
+        "pi",
+        "npiap",
+        "epuap"
+      ],
+      "primary_severity_axes": [
+        "depth",
+        "tissue loss",
+        "exposed structures",
+        "necrosis"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [
+        "open_wound_segmentation",
+        "relative_depth_map"
+      ],
+      "optional_tools": [
+        "tissue_exposure_classifier",
+        "necrosis_detector"
+      ],
+      "clinical_doc_ids": [
+        "pressure_injury_EPUAP_NPIAP_PPPIA_classification_2019"
+      ],
+      "retrieval_filters": {
+        "condition": "pi",
+        "doc_type": [
+          "staging_system",
+          "classification_guideline"
+        ]
+      },
+      "output_schema": "pressure_injury_stage_schema",
+      "limitations": [
+        "Depth map is relative and cannot confirm physical depth.",
+        "Exposed structures, undermining, tunneling, and suspected deep tissue injury need clinician confirmation."
+      ]
+    },
+    {
+      "condition_id": "dfu",
+      "condition_name": "Diabetic Foot Ulcer",
+      "classifier_labels": [
+        "Diabetic_Foot_Ulcers_(DFU)"
+      ],
+      "aliases": [
+        "diabetic foot ulcer",
+        "diabetic foot ulcers",
+        "dfu",
+        "wagner"
+      ],
+      "primary_severity_axes": [
+        "depth",
+        "infection",
+        "ischemia",
+        "gangrene"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [
+        "open_wound_segmentation",
+        "relative_depth_map"
+      ],
+      "optional_tools": [
+        "tissue_exposure_classifier",
+        "necrosis_detector",
+        "perfusion_proxy"
+      ],
+      "clinical_doc_ids": [
+        "dfu_wagner_classification_cureus_2022",
+        "iwgdf_dfu_guideline"
+      ],
+      "retrieval_filters": {
+        "condition": "dfu",
+        "doc_type": [
+          "grading_system",
+          "clinical_guideline"
+        ]
+      },
+      "output_schema": "dfu_wagner_grade_schema",
+      "limitations": [
+        "Infection, ischemia, perfusion, and osteomyelitis cannot be fully confirmed from RGB image alone.",
+        "Clinical confirmation is required for systemic infection or vascular compromise."
+      ]
+    },
+    {
+      "condition_id": "vlu",
+      "condition_name": "Venous Leg Ulcer",
+      "classifier_labels": [
+        "Venous_Leg_Ulcers_(VLU)"
+      ],
+      "aliases": [
+        "venous leg ulcer",
+        "vlu"
+      ],
+      "primary_severity_axes": [
+        "area",
+        "healing trajectory",
+        "exudate",
+        "edema"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [
+        "open_wound_segmentation"
+      ],
+      "optional_tools": [
+        "serial_area_change",
+        "exudate_detection",
+        "swelling_estimator"
+      ],
+      "clinical_doc_ids": [
+        "vlu_wound_assessment_docs"
+      ],
+      "retrieval_filters": {
+        "condition": "vlu",
+        "doc_type": [
+          "wound_assessment"
+        ]
+      },
+      "output_schema": "vlu_assessment_schema",
+      "limitations": [
+        "No VLU-specific severity model or reference document is currently packaged."
+      ]
+    },
+    {
+      "condition_id": "eczema",
+      "condition_name": "Atopic Dermatitis / Eczema",
+      "classifier_labels": [
+        "Atopic_Dermatitis_(Eczema)"
+      ],
+      "aliases": [
+        "eczema",
+        "atopic dermatitis"
+      ],
+      "primary_severity_axes": [
+        "area",
+        "erythema",
+        "excoriation",
+        "lichenification"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "redness_estimator",
+        "body_area_segmentation",
+        "scratch_texture_detector"
+      ],
+      "clinical_doc_ids": [
+        "easi_scorad_references"
+      ],
+      "retrieval_filters": {
+        "condition": "eczema",
+        "doc_type": [
+          "severity_score"
+        ]
+      },
+      "output_schema": "eczema_severity_schema",
+      "limitations": [
+        "EASI/SCORAD scoring tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "contact_dermatitis",
+      "condition_name": "Contact Dermatitis",
+      "classifier_labels": [
+        "Contact_Dermatitis"
+      ],
+      "aliases": [
+        "contact dermatitis"
+      ],
+      "primary_severity_axes": [
+        "erythema",
+        "vesicles",
+        "crusting",
+        "erosion"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "redness_estimator",
+        "blister_crust_detector",
+        "affected_area_estimator"
+      ],
+      "clinical_doc_ids": [
+        "dermatitis_severity_references"
+      ],
+      "retrieval_filters": {
+        "condition": "contact_dermatitis",
+        "doc_type": [
+          "severity_reference"
+        ]
+      },
+      "output_schema": "dermatitis_severity_schema",
+      "limitations": [
+        "Standalone blister, crust, and erosion tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "seborrheic_dermatitis",
+      "condition_name": "Seborrheic Dermatitis",
+      "classifier_labels": [
+        "Seborrheic_Dermatitis"
+      ],
+      "aliases": [
+        "seborrheic dermatitis"
+      ],
+      "primary_severity_axes": [
+        "erythema",
+        "greasy scaling",
+        "distribution"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "redness_estimator",
+        "scale_texture_analyzer",
+        "region_mapping"
+      ],
+      "clinical_doc_ids": [
+        "seborrheic_dermatitis_scoring_docs"
+      ],
+      "retrieval_filters": {
+        "condition": "seborrheic_dermatitis",
+        "doc_type": [
+          "severity_reference"
+        ]
+      },
+      "output_schema": "seborrheic_dermatitis_schema",
+      "limitations": [
+        "Standalone redness, scale, and distribution tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "acne",
+      "condition_name": "Acne",
+      "classifier_labels": [
+        "Acne"
+      ],
+      "aliases": [
+        "acne"
+      ],
+      "primary_severity_axes": [
+        "lesion count",
+        "lesion type"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "lesion_detector",
+        "papule_pustule_nodule_classifier"
+      ],
+      "clinical_doc_ids": [
+        "acne_severity_grading"
+      ],
+      "retrieval_filters": {
+        "condition": "acne",
+        "doc_type": [
+          "severity_grading"
+        ]
+      },
+      "output_schema": "acne_grading_schema",
+      "limitations": [
+        "Lesion counting and subtype classification are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "hidradenitis_suppurativa",
+      "condition_name": "Hidradenitis Suppurativa",
+      "classifier_labels": [
+        "Hidradenitis_Suppurativa_(HS)"
+      ],
+      "aliases": [
+        "hs",
+        "hidradenitis suppurativa"
+      ],
+      "primary_severity_axes": [
+        "abscesses",
+        "tunnels",
+        "scarring"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "abscess_detector",
+        "sinus_tract_scar_detector"
+      ],
+      "clinical_doc_ids": [
+        "hurley_staging"
+      ],
+      "retrieval_filters": {
+        "condition": "hidradenitis_suppurativa",
+        "doc_type": [
+          "staging_system"
+        ]
+      },
+      "output_schema": "hs_hurley_stage_schema",
+      "limitations": [
+        "Sinus tracts and scarring usually need clinical confirmation."
+      ]
+    },
+    {
+      "condition_id": "sunburn",
+      "condition_name": "Sunburn",
+      "classifier_labels": [
+        "Sunburn"
+      ],
+      "aliases": [
+        "sunburn"
+      ],
+      "primary_severity_axes": [
+        "erythema",
+        "blistering",
+        "peeling",
+        "area"
+      ],
+      "network_features": [
+        "texture",
+        "color",
+        "erythema"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "blister_detector",
+        "affected_area_estimator"
+      ],
+      "clinical_doc_ids": [
+        "burn_sunburn_severity_references"
+      ],
+      "retrieval_filters": {
+        "condition": "sunburn",
+        "doc_type": [
+          "burn_severity_reference"
+        ]
+      },
+      "output_schema": "sunburn_severity_schema",
+      "limitations": [
+        "No external tool is required for the current prototype; texture and color cues are handled inside the classifier network.",
+        "Blistering and affected area tools are future additions."
+      ]
+    },
+    {
+      "condition_id": "psoriasis",
+      "condition_name": "Psoriasis",
+      "classifier_labels": [
+        "Psoriasis"
+      ],
+      "aliases": [
+        "psoriasis"
+      ],
+      "primary_severity_axes": [
+        "area",
+        "erythema",
+        "scaling",
+        "thickness"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "plaque_segmentation",
+        "redness_estimator",
+        "scale_texture_analyzer",
+        "thickness_proxy"
+      ],
+      "clinical_doc_ids": [
+        "pasi_bsa_scoring"
+      ],
+      "retrieval_filters": {
+        "condition": "psoriasis",
+        "doc_type": [
+          "severity_score"
+        ]
+      },
+      "output_schema": "psoriasis_pasi_bsa_schema",
+      "limitations": [
+        "PASI/BSA-specific tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "bruising_contusions",
+      "condition_name": "Bruising / Contusions",
+      "classifier_labels": [
+        "Bruising-Contusions"
+      ],
+      "aliases": [
+        "bruising",
+        "contusion",
+        "contusions"
+      ],
+      "primary_severity_axes": [
+        "area",
+        "color",
+        "swelling",
+        "temporal change"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "color_analysis",
+        "affected_area_estimator",
+        "swelling_estimator",
+        "serial_comparison"
+      ],
+      "clinical_doc_ids": [
+        "contusion_assessment_references"
+      ],
+      "retrieval_filters": {
+        "condition": "bruising_contusions",
+        "doc_type": [
+          "assessment_reference"
+        ]
+      },
+      "output_schema": "bruising_assessment_schema",
+      "limitations": [
+        "Color analysis and serial comparison tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "melasma",
+      "condition_name": "Melasma",
+      "classifier_labels": [
+        "Melasma"
+      ],
+      "aliases": [
+        "melasma"
+      ],
+      "primary_severity_axes": [
+        "pigmentation intensity",
+        "area"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "pigment_segmentation",
+        "color_index",
+        "facial_distribution_mapping"
+      ],
+      "clinical_doc_ids": [
+        "masi_mmasi_references"
+      ],
+      "retrieval_filters": {
+        "condition": "melasma",
+        "doc_type": [
+          "severity_score"
+        ]
+      },
+      "output_schema": "melasma_masi_schema",
+      "limitations": [
+        "MASI/mMASI measurement tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "cold_injury",
+      "condition_name": "Cold Injury",
+      "classifier_labels": [
+        "Cold_Injury"
+      ],
+      "aliases": [
+        "cold injury",
+        "frostbite"
+      ],
+      "primary_severity_axes": [
+        "perfusion loss",
+        "blistering",
+        "necrosis"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "perfusion_proxy",
+        "blister_detector",
+        "necrosis_detector"
+      ],
+      "clinical_doc_ids": [
+        "frostbite_cold_injury_grading"
+      ],
+      "retrieval_filters": {
+        "condition": "cold_injury",
+        "doc_type": [
+          "grading_system"
+        ]
+      },
+      "output_schema": "cold_injury_grading_schema",
+      "limitations": [
+        "Perfusion loss cannot be confirmed from uncalibrated RGB image alone."
+      ]
+    },
+    {
+      "condition_id": "rosacea",
+      "condition_name": "Rosacea",
+      "classifier_labels": [
+        "Rosacea"
+      ],
+      "aliases": [
+        "rosacea"
+      ],
+      "primary_severity_axes": [
+        "erythema",
+        "papules/pustules",
+        "telangiectasia"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "redness_estimator",
+        "lesion_detector",
+        "vessel_detector"
+      ],
+      "clinical_doc_ids": [
+        "rosacea_grading_references"
+      ],
+      "retrieval_filters": {
+        "condition": "rosacea",
+        "doc_type": [
+          "severity_grading"
+        ]
+      },
+      "output_schema": "rosacea_grading_schema",
+      "limitations": [
+        "Standalone erythema, lesion count, and vessel tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "surgical_wounds",
+      "condition_name": "Surgical Wounds",
+      "classifier_labels": [
+        "Surgical_Wounds"
+      ],
+      "aliases": [
+        "surgical wound",
+        "surgical wounds"
+      ],
+      "primary_severity_axes": [
+        "dehiscence",
+        "drainage",
+        "infection signs",
+        "necrosis"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "gap_width_estimator",
+        "incision_segmentation",
+        "redness_estimator",
+        "exudate_detection",
+        "necrosis_detector"
+      ],
+      "clinical_doc_ids": [
+        "surgical_wound_assessment_docs"
+      ],
+      "retrieval_filters": {
+        "condition": "surgical_wounds",
+        "doc_type": [
+          "wound_assessment"
+        ]
+      },
+      "output_schema": "surgical_wound_assessment_schema",
+      "limitations": [
+        "Incision segmentation, calibrated gap width, erythema, exudate, and necrosis tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "radiation_injury",
+      "condition_name": "Radiation Injury",
+      "classifier_labels": [
+        "Radiation_Injury"
+      ],
+      "aliases": [
+        "radiation injury",
+        "radiation dermatitis"
+      ],
+      "primary_severity_axes": [
+        "erythema",
+        "desquamation",
+        "ulceration",
+        "necrosis"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "redness_estimator",
+        "desquamation_detector",
+        "ulcer_necrosis_detector"
+      ],
+      "clinical_doc_ids": [
+        "ctcae_radiation_dermatitis"
+      ],
+      "retrieval_filters": {
+        "condition": "radiation_injury",
+        "doc_type": [
+          "grading_system"
+        ]
+      },
+      "output_schema": "radiation_dermatitis_ctcae_schema",
+      "limitations": [
+        "CTCAE-specific feature tools are not currently implemented."
+      ]
+    },
+    {
+      "condition_id": "burn_wounds",
+      "condition_name": "Burn Wounds",
+      "classifier_labels": [
+        "Burn_Wounds"
+      ],
+      "aliases": [
+        "burn wound",
+        "burn wounds",
+        "burn"
+      ],
+      "primary_severity_axes": [
+        "burn depth",
+        "TBSA",
+        "perfusion",
+        "necrosis"
+      ],
+      "network_features": [
+        "texture",
+        "color"
+      ],
+      "required_tools": [],
+      "optional_tools": [
+        "burn_segmentation",
+        "burn_depth_classifier",
+        "tbsa_estimator",
+        "blister_detector",
+        "necrosis_detector"
+      ],
+      "clinical_doc_ids": [
+        "burn_depth_tbsa_references"
+      ],
+      "retrieval_filters": {
+        "condition": "burn_wounds",
+        "doc_type": [
+          "burn_depth",
+          "tbsa_reference"
+        ]
+      },
+      "output_schema": "burn_wound_assessment_schema",
+      "limitations": [
+        "Burn depth and TBSA tools are not currently implemented; do not substitute the relative depth map as a burn depth classifier."
+      ]
+    }
+  ]
+}

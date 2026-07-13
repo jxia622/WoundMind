@@ -1,0 +1,37 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.venv/
+venv/
+venv-hw/
+
+.env
+.env.*
+!.env.example
+
+.demo-runtime/
+case_artifacts/
+feedback.jsonl
+*.log
+
+# Model weights are intentionally external to git.
+checkpoints/*
+!checkpoints/.gitkeep
+!checkpoints/**/.gitkeep
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Keep manifests and text notes, but avoid committing downloaded PDFs.
+clinical_docs/*.pdf
+
+# Local Hugging Face / model caches.
+.cache/
+hf_cache/
+models--*/

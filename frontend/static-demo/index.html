@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="WoundMind wound analysis assistant frontend"
+    />
+    <title>WoundMind analysis assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260620-3" />
+  </head>
+  <body>
+    <div class="prototype-shell">
+      <nav class="step-nav" aria-label="Analysis navigation">
+        <button
+          class="icon-button"
+          id="previous-screen"
+          type="button"
+          aria-label="Previous screen"
+        >
+          <i class="ti ti-chevron-left" aria-hidden="true"></i>
+        </button>
+        <div class="step-status" aria-live="polite">
+          <div class="step-dots" aria-hidden="true">
+            <span class="step-dot"></span>
+            <span class="step-dot"></span>
+          </div>
+          <span id="step-label">Step 1 of 2 — Upload &amp; result</span>
+        </div>
+        <button
+          class="icon-button"
+          id="next-screen"
+          type="button"
+          aria-label="Next screen"
+          disabled
+        >
+          <i class="ti ti-chevron-right" aria-hidden="true"></i>
+        </button>
+      </nav>
+
+      <main id="app">
+        <section class="screen" id="screen-result" data-screen="1">
+          <h1 class="sr-only">WoundMind analysis result</h1>
+
+          <header class="top-bar">
+            <div class="top-bar-context">
+              <span class="logo-chip">WoundMind</span>
+              <span class="patient-context">Research analysis workspace</span>
+            </div>
+            <span class="api-status" id="api-status">
+              <span class="api-status-dot"></span>
+              Checking API
+            </span>
+          </header>
+
+          <div class="content-stack">
+            <article class="card upload-card">
+              <div>
+                <p class="section-label">Wound image</p>
+                <strong class="upload-title">Choose an image to analyze</strong>
+                <p class="upload-description">
+                  JPEG, PNG, or WebP. The local backend runs condition,
+                  segmentation, depth, and severity models.
+                </p>
+              </div>
+              <div class="upload-actions">
+                <label class="button button-default upload-button" for="image-upload">
+                  <i class="ti ti-photo-plus" aria-hidden="true"></i>
+                  Choose image
+                </label>
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                />
+                <button class="button button-success" id="analyze-image" type="button" disabled>
+                  <i class="ti ti-scan" aria-hidden="true"></i>
+                  Analyze image
+                </button>
+              </div>
+              <div class="selected-file" id="selected-file" hidden>
+                <i class="ti ti-file-image" aria-hidden="true"></i>
+                <span id="selected-file-name"></span>
+              </div>
+              <div class="analysis-progress" id="analysis-progress" hidden>
+                <span class="spinner" aria-hidden="true"></span>
+                <span id="analysis-progress-text">Loading models and analyzing image…</span>
+              </div>
+              <aside class="notice notice-danger" id="analysis-error" role="alert" hidden>
+                <i class="ti ti-alert-circle" aria-hidden="true"></i>
+                <span id="analysis-error-text"></span>
+              </aside>
+              <aside class="notice notice-warning" id="validation-warning" role="status" hidden>
+                <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+                <span id="validation-warning-text"></span>
+              </aside>
+            </article>
+
+            <div class="result-content" id="result-content" hidden>
+              <article class="card result-card">
+                <div class="result-summary">
+                  <p class="section-label" id="condition-name">Condition</p>
+                  <p class="stage-hero" id="severity-label">—</p>
+                  <p class="stage-name" id="severity-description">
+                    Severity result will appear here.
+                  </p>
+
+                  <div class="confidence-block">
+                    <span class="confidence-label">Confidence level</span>
+                    <strong class="confidence-level" id="confidence-level">—</strong>
+                  </div>
+                </div>
+
+                <div class="image-placeholder wound-photo result-image-frame">
+                  <img id="result-image" alt="Uploaded wound" />
+                  <span class="image-label">
+                    <i class="ti ti-photo" aria-hidden="true"></i>
+                    Uploaded image
+                  </span>
+                </div>
+              </article>
+
+              <article class="card">
+                <p class="section-label">Top 3 probable conditions</p>
+                <div class="probability-list" id="condition-probabilities"></div>
+              </article>
+
+              <article class="card" id="severity-probability-card">
+                <p class="section-label" id="severity-probability-title">
+                  Severity probabilities
+                </p>
+                <div class="probability-list" id="severity-probabilities"></div>
+              </article>
+
+              <aside class="notice notice-info" id="severity-unavailable" hidden>
+                <i class="ti ti-info-circle" aria-hidden="true"></i>
+                <span id="severity-unavailable-text"></span>
+              </aside>
+
+              <button class="button button-default inspect-button" id="inspect-reasoning" type="button">
+                <i class="ti ti-microscope" aria-hidden="true"></i>
+                Review segmentation and depth
+              </button>
+
+              <aside class="notice notice-warning" role="note">
+                <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+                <span>Research prototype — not for clinical diagnosis.</span>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" id="screen-inspector" data-screen="2" hidden>
+          <h2 class="sr-only">Segmentation and depth review</h2>
+
+          <header class="top-bar">
+            <div class="top-bar-context">
+              <button
+                class="icon-button top-back"
+                id="inspector-back"
+                type="button"
+                aria-label="Back to result"
+              >
+                <i class="ti ti-arrow-left" aria-hidden="true"></i>
+              </button>
+              <span class="screen-title">Analysis review</span>
+            </div>
+            <span class="badge badge-info" id="inspector-badge">Awaiting analysis</span>
+          </header>
+
+          <div class="content-stack inspector-content">
+            <article class="card">
+              <p class="section-label">Wound image analysis</p>
+              <div class="analysis-preview-layout">
+                <div class="analysis-preview" id="analysis-preview">
+                  <img
+                    class="analysis-image analysis-original-image"
+                    id="analysis-original-image"
+                    alt="Original uploaded wound"
+                  />
+                  <img
+                    class="analysis-image analysis-mask-image"
+                    id="analysis-mask-image"
+                    alt="Generated segmentation overlay"
+                  />
+                  <img
+                    class="analysis-image analysis-depth-image"
+                    id="analysis-depth-image"
+                    alt="Generated full-image depth map"
+                  />
+
+                  <div class="preview-controls">
+                    <button
+                      class="preview-control preview-control-mask hold-preview-button"
+                      id="hold-mask-overlay"
+                      type="button"
+                      aria-label="Hold to view the segmentation overlay"
+                      aria-pressed="false"
+                      disabled
+                    >
+                      <i class="ti ti-vector" aria-hidden="true"></i>
+                      <span id="mask-preview-button-text">Hold for segmentation</span>
+                    </button>
+                    <button
+                      class="preview-control preview-control-depth hold-preview-button"
+                      id="hold-depth-map"
+                      type="button"
+                      aria-label="Hold to view the full depth map"
+                      aria-pressed="false"
+                      disabled
+                    >
+                      <i class="ti ti-3d-cube-sphere" aria-hidden="true"></i>
+                      <span id="depth-preview-button-text">Hold for depth map</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  class="depth-legend analysis-depth-legend"
+                  aria-label="Depth map legend"
+                >
+                  <span class="depth-legend-label">
+                    <strong>Shallow</strong>
+                  </span>
+                  <span class="depth-legend-bar" aria-hidden="true"></span>
+                  <span class="depth-legend-label">
+                    <strong>Deep</strong>
+                  </span>
+                </div>
+              </div>
+
+              <dl class="meta-list segmentation-size">
+                <div class="meta-row">
+                  <dt>Estimated mask area</dt>
+                  <dd id="mask-area">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="card">
+              <p class="section-label">Analysis inputs</p>
+              <label class="toggle-row">
+                <span>
+                  <strong>Include mask in severity model</strong>
+                  <small>Uses the generated or clinician-drawn mask</small>
+                </span>
+                <input id="mask-enabled" type="checkbox" checked />
+                <span class="toggle-control" aria-hidden="true"></span>
+              </label>
+              <label class="toggle-row">
+                <span>
+                  <strong>Use custom mask</strong>
+                  <small>Draw over the uploaded image manually</small>
+                </span>
+                <input id="custom-mask-enabled" type="checkbox" />
+                <span class="toggle-control" aria-hidden="true"></span>
+              </label>
+
+              <div class="custom-mask-editor" id="custom-mask-editor" hidden>
+                <div class="draw-canvas-wrap" id="draw-canvas-wrap">
+                  <canvas
+                    id="mask-base-canvas"
+                    width="600"
+                    height="320"
+                    aria-label="Uploaded wound image"
+                  ></canvas>
+                  <canvas
+                    id="mask-draw-canvas"
+                    width="600"
+                    height="320"
+                    aria-label="Draw custom mask"
+                  ></canvas>
+                </div>
+                <div class="draw-toolbar">
+                  <label class="brush-size-label">
+                    Brush size
+                    <input
+                      id="brush-size"
+                      type="range"
+                      min="4"
+                      max="48"
+                      step="2"
+                      value="20"
+                    />
+                  </label>
+                  <button
+                    class="button button-default tool-button is-active"
+                    id="draw-brush"
+                    type="button"
+                  >
+                    <i class="ti ti-pencil" aria-hidden="true"></i>
+                    Brush
+                  </button>
+                  <button
+                    class="button button-default tool-button"
+                    id="draw-eraser"
+                    type="button"
+                  >
+                    <i class="ti ti-eraser" aria-hidden="true"></i>
+                    Eraser
+                  </button>
+                  <button class="button button-default" id="clear-mask" type="button">
+                    <i class="ti ti-x" aria-hidden="true"></i>
+                    Clear
+                  </button>
+                  <button
+                    class="button button-success apply-mask"
+                    id="apply-mask"
+                    type="button"
+                  >
+                    <i class="ti ti-check" aria-hidden="true"></i>
+                    Apply
+                  </button>
+                </div>
+                <p class="inline-status" id="mask-apply-status" aria-live="polite"></p>
+              </div>
+
+              <label class="toggle-row depth-input-row">
+                <span>
+                  <strong>Include depth in severity model</strong>
+                  <small>Uses experimental depth as an auxiliary input</small>
+                </span>
+                <input id="depth-enabled" type="checkbox" checked />
+                <span class="toggle-control" aria-hidden="true"></span>
+              </label>
+
+              <button
+                class="button button-success update-severity-button"
+                id="update-severity"
+                type="button"
+                disabled
+              >
+                <i class="ti ti-refresh" aria-hidden="true"></i>
+                Update severity result
+              </button>
+              <p class="inline-status" id="severity-update-status" aria-live="polite"></p>
+
+              <aside class="notice notice-info" role="note">
+                <i class="ti ti-info-circle" aria-hidden="true"></i>
+                <span>
+                  Depth is experimental. The full-image depth view is for this
+                  demo; backend severity processing still uses the
+                  segmentation-guided depth input.
+                </span>
+              </aside>
+            </article>
+
+            <button class="button button-default" id="back-to-result" type="button">
+              <i class="ti ti-arrow-left" aria-hidden="true"></i>
+              Back to result
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js?v=20260620-3"></script>
+  </body>
+</html>

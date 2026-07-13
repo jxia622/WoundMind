@@ -1,0 +1,9 @@
+venv-hw/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.git/
+test_*.py
+verify_*.py
+check_*.py

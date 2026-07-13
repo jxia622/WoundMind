@@ -1,0 +1,5 @@
+# Optional agent-layer dependencies.
+# Install on top of requirements.txt when using app/agent or scripts/ingest_docs.py.
+openai>=1.0
+pypdf>=6.0
+chromadb>=0.5

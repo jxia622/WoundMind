@@ -1,0 +1,143 @@
+Title: Wilderness Medical Society Frostbite Summary 2024
+Source URL: https://wms.org/magazine/magazine/1494/Frostbite-Summary-2024/default.aspx
+Credibility: Wilderness Medical Society clinical-practice summary
+Downloaded as text for local retrieval.
+
+Frostbite Summary 2024 Skip to main content 
+
+Sign in 
+Toggle search 
+
+Keyword search 
+
+Toggle navigation 
+
+Keyword search 
+
+WMS 
+
+iMIS 
+
+Volume , Issue 
+
+Introduction 
+The Wilderness Medical Society (WMS) convened an expert panel to develop a set of evidence-based guidelines for prevention and treatment of frostbite to guide clinicians and first responders and disseminate knowledge about best practices in this area of clinical care. Summarized here are the main pre-hospital prophylactic and therapeutic modalities and recommendations about their role in injury management. 
+Classi fi cation of Frostbite 
+Frostnip is a super fi cial nonfreezing cold injury associated with intense vasoconstriction on exposed skin, usually cheeks, ears, or nose. Ice crystals, appearing as frost, form on the skin surface. Frostnip is distinct from and may precede frostbite. With frostnip, ice crystals do not form within the tissue and tissue loss does not occur. Numbness and pallor resolve quickly after warming the skin with appropriate clothing, direct contact, breathing with cupped hands over the nose, or gaining shelter. No long-term damage occurs. Frostnip signals conditions favorable for frostbite; appropriate action should be undertaken immediately to prevent injury. 
+Frostbite has historically been divided into 4 tiers or “ degrees ” of injury following the classi fi cation scheme for thermal burn injury. These classi fi cations are based on acute physical fi ndings and advanced imaging after rewarming. The classifications can be dif fi cult to assess in the fi eld before rewarming because the still-frozen tissue is hard, pale, and without feeling. An alternate 2-tiered classi fi cation more appropriate for fi eld use (after rewarming but before imaging) is suggested following the 4-tier classi fi cation below: 
+First-degree frostbite causes numbness and redness. A white or yellow, fi rm, and slightly raised area develops in the area of injury. No gross tissue death (“black skin”) occurs; there may be some sloughing of the outer skin layer. Some inflammation is common. 
+Second-degree frostbite causes super fi cial skin blisters with a clear or milky fl uid surrounded by red and inflamed skin. 
+Third-degree frostbite causes deeper blood-filled blisters, indicating that the injury has extended into the deeper layers of skin. 
+Fourth-degree frostbite extends completely through the superficial skin layers and involves the comparatively deeper tissues such as fat, muscle, tendon, and bone. 
+For field classi fi cation, after spontaneous or formal rewarming but before imaging, we favor the following 2 tier classi fi cation scheme: 
+Superficial— no or minimal anticipated tissue loss, corresponding to first- and second-degree injury 
+Deep— anticipated tissue loss, corresponding to 3rd- and 4th-degree injury 
+Severity of frostbite may vary within a single extremity. 
+Prevention 
+The adage that “ prevention is better than treatment ” is especially true for frostbite, which is typically preventable and often not significantly improved by treatment. Underlying medical problems (including peripheral vascular disease, diabetes, Raynaud’s disease) may increase risk of frostbite, so prevention must address both environmental and health-related aspects. Frostbite injury occurs when tissue heat loss exceeds the ability of local tissue perfusion to prevent freezing of soft tissues (blood fl ow delivers heat). One must both ensure adequate perfusion and minimize heat loss to prevent frostbite. The adventurer should recognize cold-induced “numbness” as a warning that frostbite injury may be imminent if protective and/or avoidance measures are not taken to decrease tissue cooling.  Subsequent loss of sensation does not mean the situation has improved, rather receptors and nerves are not conducting pain/cold signals because they are nearing the freezing point. 
+MAINTAINING PERIPHERAL PERFUSION 
+Preventive measures to ensure local tissue perfusion include: 1) maintaining adequate core temperature and body hydration; 2) minimizing effects of known diseases, medications, and substances (e.g., including awareness and symptoms of alcohol and drug use) that might decrease perfusion; 3) covering all skin and the scalp to insulate from the cold; 4) minimizing blood fl ow restriction, such as occurs with constrictive clothing, footwear, or immobility; 5) ensuring adequate nutrition; and 6) using supplemental oxygen in severely hypoxic conditions (e.g., elevations above 7500 m). 
+EXERCISE 
+Exercise is one speci fi c method to maintain peripheral perfusion. Exercise enhances the degree and frequency of cold-induced peripheral vasodilation. However, using exercise to increase warmth can lead to exhaustion with subsequent profound systemic heat loss should exhaustion occur. Recognizing this caveat, exercise and its associated elevation in core and peripheral temperatures can be protective in preventing frostbite. 
+PROTECTION FROM COLD 
+Measures should be taken to minimize exposure of bare skin to cold. These measures include the following: 1) avoiding environmental conditions that predispose to frostbite, speci fi cally below – 15 ° C, even with low wind speeds; 2) protecting skin from moisture, wind, and cold; 3) avoiding perspiration or wet extremities; 4) increasing insulation and skin protection (e.g., by adding clothing layers, changing from gloves to mitts, etc.); 5) ensuring beneficial behavioral responses to changing environmental conditions (e.g., not being under the in fl uence of illicit drugs, alcohol, or extreme hypoxemia) ; 6) using chemical hand and foot warmers and electric foot warmers to maintain peripheral warmth (note: warmers should be close to body temperature before being activated and must not be placed directly against skin or constrict fl ow if used within a boot); 7) regularly checking oneself and the group for extremity numbness or pain and warming the digits and/or extremities as soon as possible if there is concern that frostbite may be developing; 8) recognizing frostnip or super fi cial frostbite before it becomes more serious; and 9) minimizing duration of cold exposure. Emollients such as moisturizing creams, lotions, and ointments do not protect against — and might even increase — risk of frostbite. The time that a digit or extremity can remain numb before developing frostbite is unknown; thus, digits or extremities with numbness or tingling should be warmed as soon as possible. An extremity at risk for frostbite (e.g., numb, poor dexterity, pale color) should be warmed with adjacent body heat from the patient or a companion, using the axilla or abdomen. 
+Field Treatment and Secondary Prevention 
+If a body part is frozen in the fi eld, the frozen tissue should be protected from further damage. Remove jewelry or other constrictive extraneous material from the body part. Do not rub or apply ice or snow to the affected area. 
+REFREEZING INJURY 
+A decision must be made whether or not to thaw the tissue in the field. If environmental conditions are such that thawed tissue could refreeze, it is safer to keep the affected part frozen until a thawed state can be maintained. One must absolutely avoid refreezing if fi eld-thawing occurs. 
+SPONTANEOUS OR PASSIVE THAWING 
+Most frostbite thaws spontaneously and should be allowed to do so if rapid rewarming (described below) cannot be readily achieved. Do not purposefully keep tissue below freezing temperatures because this will increase the duration that the tissue is frozen and might result in increased area of freezing injury and worse outcomes. If environmental and situational conditions allow for spontaneous or slow thawing, tissue should be allowed to thaw. 
+Strategies for 2 scenarios are presented: 
+Scenario 1: The frozen part has the potential for refreezing and is not actively thawed. 
+Scenario 2: The frozen part is thawed and kept warm without refreezing until evacuation is completed. 
+THERAPEUTIC OPTIONS FOR BOTH SCENARIOS 
+Hydration 
+Appropriate hydration and avoiding hypovolemia are important for frostbite recovery. Oral fl uids may be given if the patient is alert, capable of purposeful swallowing, and is not vomiting. If the patient is nauseated or vomiting or has an altered mental status, IV normal saline should be given to maintain normal urine output. Intravenous fl uids should optimally be warmed before infusion ( minimally to 37°C but preferably to 40-42°C with a context-appropriate method such as heat packs, stove, car heater, etc) and be infused in small (eg, 250 ml), rapid boluses because slow infusion may result in fl uid cooling and even freezing as it passes through the tubing. Fluid administration should be optimized to prevent clinical dehydration. 
+Ibuprofen 
+If no other contraindications (such as kidney disease or stomach ulcers), Ibuprofen can be given in age and weight-appropriate dosing. This may help decrease harmful inflammation and vasoconstriction related to freezing injuries and decrease pain. 
+SPECIFIC RECOMMENDATIONS —SCENARIO 1 (no active thawing) 
+Therapeutic options for frostbite in Scenario 1 include: 
+Dressings 
+Bulky, clean, and dry gauze or sterile cotton dressings should be applied to the frozen part and between the toes and fi ngers. 
+Ambulation and protection 
+If at all possible, a frozen extremity should not be used for walking, climbing, or other maneuvers until de fi nitive care is reached. If using the frozen extremity for mobility is considered, a risk-bene fi t analysis must consider the potential for further trauma and possible worse outcomes. Although reasonable to walk on a foot with frostbitten toes for evacuation purposes, it is inadvisable to walk on an entirely frostbitten foot because of the potential for resulting worsening tissue damage. If using a frozen extremity for locomotion or evacuation is unavoidable, the extremity should be padded, splinted, and kept as immobile as possible to minimize additional trauma. 
+SPECIFIC RECOMMENDATIONS —SCENARIO 2 (thawing and continued warming) 
+Therapeutic options for frostbite in Scenario 2 include: 
+Rapid field rewarming of frostbite 
+Field rewarming by warm water bath immersion can and should be performed if the proper resources are available and de fi nitive care is more than 2 h distant. Other heat sources (eg, fi re, space heater, oven, heated rocks, etc.) should be avoided because of the risk of thermal burn injury. Rapid rewarming by water bath has been shown to result in better outcomes than slow rewarming. Field rewarming should only be undertaken if the frozen part can be kept thawed and warm until the victim arrives at de fi nitive care. Water should be heated to 37 ° C to 39 ° C (98.6 ° to 102.2 ° F) using a thermometer to maintain this range. If a thermometer is not available, a safe water temperature can be determined by placing a caregiver ’ s uninjured hand in the water for at least 30 seconds to con fi rm that the water temperature is tolerable and will not cause burn injury. Circulation of water around the frozen tissue will help maintain correct temperature. Because the water may cool quickly after the rewarming process is started, the water should be continuously and carefully warmed to the target temperature. If the frozen part is being rewarmed in a pot, care must be taken that the frozen part does not press against the bottom or sides, to prevent damage to the skin. Rewarming is complete when the frozen skin takes on a red or purple appearance and becomes soft and pliable to the touch. This is usually accomplished in approximately 30 min but is variable depending on the extent and depth of injury. The affected tissues should then be allowed to air dry or be gently dried with blotting technique (not rubbing) to minimize further damage. Under appropriate circumstances, this method of fi eld rewarming is the fi rst de fi nitive step in frostbite treatment. 
+Pain control 
+During the often painful rewarming process when patients regain sensation, pain medications (eg, NSAIDs, Acetaminophen, or opiate analgesics) should be considered as dictated by individual patient situation. 
+Spontaneous or passive thawing 
+If fi eld rewarming is not possible or sustainable, spontaneous or slow thawing should be allowed. Slow rewarming is accomplished by moving to a warmer location (eg, tent or hut) and warming with adjacent body heat from the patient or a caregiver as previously described. 
+Debridement of blisters 
+Debridement of blisters should not be routinely performed in the fi eld. If a clear, fl uid- fi lled blister is tense and at high risk for rupture during evacuation, blister aspiration and application of a dry gauze dressing should be performed in the fi eld to minimize infection risk. Hemorrhagic bullae should not be aspirated or debrided in the fi eld. 
+Dressings 
+Bulky, dry gauze dressings should be applied to the thawed parts for protection and wound care. Substantial inflammation should be anticipated, so circumferential dressings should be wrapped loosely to allow for swelling without placing pressure on the underlying tissue. Topical aloe vera can be applied to thawed tissue before applying dressings and may improve outcomes. 
+Ambulation and protection 
+After the rewarming process, swelling should be anticipated. If passive thawing has occurred, boots (or boot liners) may need to be worn continuously to limit excessive swelling that may impede evacuation. Boots that were removed for active rewarming may not be able to be re-donned if tissue swelling has occurred during the warming process. The panel ’ s clinical experience supports the concept that a recently thawed extremity should ideally not be used for walking, climbing, or other maneuvers, and should be protected to prevent further trauma. If possible, the thawed extremity should be elevated above the level of the heart, which may also decrease inflammation. 
+Oxygen 
+Recovery of thawed tissue partly depends on the level of tissue oxygenation in the postfreezing period. Oxygen may be delivered by face mask or nasal cannula if the patient is hypoxic (oxygen saturation < 88%) or the patient is at high altitude (above 4000 m). 
+For a summary of the suggested approach to the fi eld treatment of frostbite, see Table 1. 
+HOSPITALIZATION 
+Patients with super fi cial frostbite can usually be managed as outpatients or with brief inpatient stays followed by wound care instructions. Initially, deep frostbite should be managed in an inpatient setting. Complete extent of tissue necrosis may take 1 to 3 months to appear. 
+NEW MODALITIES 
+Iloprost, a prostacyclin (PGI2) analogue and potent vasodilator that also reduces inflammation, inhibits platelet aggregation, and down-regulates lymphocyte adhesion to endothelial cells was approved by the US Food and Drug Administration in February 2024 for treatment of deep frostbite. The WMS expert panel recommend using Iloprost for deep frostbite extending to the distal interphalangeal joint or more proximal (Grades 2-4) as soon as possible, up to 72 hours after rewarming. Iloprost has been successfully utilized outside of the US as a frostbite treatment for at least 30 years. 
+Table 1. Summary of field treatment of frostbite (> 2 hours from definitive care) 
+
+Treat hypothermia and any serious trauma 
+Remove jewelry or other extraneous material from the body part 
+Rapidly rewarm in water heated and maintained between 37° and 39°C (98.6° to 102.2°F) until area becomes soft and pliable to the touch (approximately 30 minutes). Allow spontaneous or passive thawing if rapid and sustainable rewarming is not possible 
+Ibuprofen (12 mg/kg per day divided twice daily) if available 
+Pain medications as needed 
+Air dry (i.e., do not rub at any point) 
+Protect from refreezing and direct trauma 
+Apply topical aloe vera cream or gel if available 
+Dry, bulky dressings 
+Elevate the affected body part if possible 
+Systemic hydration 
+Avoid ambulation on thawed lower extremity if possible (unless only distal toes are affected) 
+Consider evaluation at appropriate facility for severe, deep frostbite injuries 
+For additional information, recommendations, tables and references, and further discussion on Iloprost and in-hospital treatment guidelines, please refer to the official clinical practice guidelines as published in the Journal of Wilderness and Environmental Medicine. 
+
+Interested in getting access to more featured articles and news on wilderness medicine, upcoming events, and other great insider information on the Wilderness Medical Society? Sign-up for the Trailblazer e-newsletter here . 
+Not a member of WMS yet? Check out membership benefits here and join today! 
+
+Share this page 
+
+Share on Facebook 
+Share on X (Twitter) 
+Share on LinkedIn 
+Email 
+More options 
+
+select 
+
+Bookmarks 
+Google+ 
+MySpace 
+Reddit 
+StumbleUpon 
+Tumblr 
+Yammer 
+
+Cookie Policy 
+
+Wilderness Medical Society 
+6705 W. Hwy 290, Suite 607-243 
+Austin, TX 78735 
+(512) 379-5399 
+(512) 379-5388 (fax) 
+
+Copyright | Privacy Policy 
+
+× 
+
+{1} 
+##LOC[OK]## 
+
+{1} 
+
+##LOC[OK]## ##LOC[Cancel]## 
+
+{1} 
+##LOC[OK]## ##LOC[Cancel]##

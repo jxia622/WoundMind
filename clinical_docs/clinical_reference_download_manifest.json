@@ -1,0 +1,188 @@
+{
+  "downloaded": [
+    {
+      "doc_id": "iwgdf_dfu_guideline",
+      "condition": "dfu",
+      "title": "IWGDF 2023 classification guideline for diabetes-related foot ulcers",
+      "url": "https://iwgdfguidelines.org/wp-content/uploads/2023/07/IWGDF-2023-03-Classification-Guideline.pdf",
+      "credibility": "International Working Group on the Diabetic Foot guideline",
+      "path": "clinical_docs/iwgdf_dfu_guideline.pdf",
+      "status": "downloaded",
+      "bytes": 854470
+    },
+    {
+      "doc_id": "vlu_wound_assessment_docs",
+      "condition": "vlu",
+      "title": "RNAO Assessment and Management of Venous Leg Ulcers learning package",
+      "url": "https://rnao.ca/sites/rnao-ca/files/Assessment_and_Management_of_Venous_Leg_Ulcers_-_Learning_Package.pdf",
+      "credibility": "Registered Nurses Association of Ontario best-practice education resource",
+      "path": "clinical_docs/vlu_wound_assessment_docs.pdf",
+      "status": "downloaded",
+      "bytes": 1199819
+    },
+    {
+      "doc_id": "easi_scorad_references",
+      "condition": "eczema",
+      "title": "HOME EASI user guide",
+      "url": "https://www.homeforeczema.org/documents/easi-user-guide-dec-2016-v2.pdf",
+      "credibility": "HOME initiative eczema outcome-measure guide",
+      "path": "clinical_docs/easi_scorad_references.pdf",
+      "status": "downloaded",
+      "bytes": 899673
+    },
+    {
+      "doc_id": "dermatitis_severity_references",
+      "condition": "contact_dermatitis",
+      "title": "AAFP Diagnosis and Management of Contact Dermatitis",
+      "url": "https://www.aafp.org/pubs/afp/issues/2010/0801/p249.html",
+      "credibility": "American Family Physician clinical review",
+      "path": "clinical_docs/dermatitis_severity_references.txt",
+      "status": "downloaded",
+      "bytes": 28757
+    },
+    {
+      "doc_id": "acne_severity_grading",
+      "condition": "acne",
+      "title": "NICE NG198 Acne vulgaris: management",
+      "url": "https://www.nice.org.uk/guidance/ng198/resources/acne-vulgaris-management-pdf-66142088866501",
+      "credibility": "NICE clinical guideline",
+      "path": "clinical_docs/acne_severity_grading.pdf",
+      "status": "downloaded",
+      "bytes": 353289
+    },
+    {
+      "doc_id": "hurley_staging",
+      "condition": "hidradenitis_suppurativa",
+      "title": "Canadian HS Foundation practical guidelines with Hurley staging",
+      "url": "https://hsfoundation.ca/wp-content/uploads/2022/10/JCMS-Hidradenitis-Suppurativa-Practical-Guidelines-CHSF-Paper-August-2022-2.pdf",
+      "credibility": "Canadian Hidradenitis Suppurativa Foundation practical guideline",
+      "path": "clinical_docs/hurley_staging.pdf",
+      "status": "downloaded",
+      "bytes": 535749
+    },
+    {
+      "doc_id": "burn_sunburn_severity_references",
+      "condition": "sunburn",
+      "title": "NCBI Bookshelf StatPearls Sunburn",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK534837/",
+      "credibility": "NCBI Bookshelf clinical reference",
+      "path": "clinical_docs/burn_sunburn_severity_references.txt",
+      "status": "downloaded",
+      "bytes": 29563
+    },
+    {
+      "doc_id": "pasi_bsa_scoring",
+      "condition": "psoriasis",
+      "title": "NICE CG153 Psoriasis: assessment and management",
+      "url": "https://www.nice.org.uk/guidance/cg153/resources/psoriasis-assessment-and-management-pdf-35109629621701",
+      "credibility": "NICE clinical guideline",
+      "path": "clinical_docs/pasi_bsa_scoring.pdf",
+      "status": "downloaded",
+      "bytes": 312527
+    },
+    {
+      "doc_id": "frostbite_cold_injury_grading",
+      "condition": "cold_injury",
+      "title": "Wilderness Medical Society Frostbite Summary 2024",
+      "url": "https://wms.org/magazine/magazine/1494/Frostbite-Summary-2024/default.aspx",
+      "credibility": "Wilderness Medical Society clinical-practice summary",
+      "path": "clinical_docs/frostbite_cold_injury_grading.txt",
+      "status": "downloaded",
+      "bytes": 17429
+    },
+    {
+      "doc_id": "surgical_wound_assessment_docs",
+      "condition": "surgical_wounds",
+      "title": "Wounds International surgical wound dehiscence consensus statement",
+      "url": "https://woundsinternational.com/wp-content/uploads/2024/06/SN24_CD_SWD_WINT_WEB.pdf",
+      "credibility": "International consensus document",
+      "path": "clinical_docs/surgical_wound_assessment_docs.pdf",
+      "status": "downloaded",
+      "bytes": 3042146
+    },
+    {
+      "doc_id": "ctcae_radiation_dermatitis",
+      "condition": "radiation_injury",
+      "title": "NCI CTCAE v6.0",
+      "url": "https://dctd.cancer.gov/research/ctep-trials/for-sites/adverse-events/ctcae-v6.pdf",
+      "credibility": "National Cancer Institute CTCAE grading terminology",
+      "path": "clinical_docs/ctcae_radiation_dermatitis.pdf",
+      "status": "downloaded",
+      "bytes": 1872616
+    },
+    {
+      "doc_id": "burn_depth_tbsa_references",
+      "condition": "burn_wounds",
+      "title": "Burn Clinical Practice Guideline",
+      "url": "https://tetaf.org/wp-content/uploads/2016/01/Burn-Practice-Guideline_vs9-FINAL-REVISED-Sept-2016.pdf",
+      "credibility": "Trauma/emergency care burn practice guideline",
+      "path": "clinical_docs/burn_depth_tbsa_references.pdf",
+      "status": "downloaded",
+      "bytes": 770296
+    },
+    {
+      "doc_id": "seborrheic_dermatitis_scoring_docs",
+      "condition": "seborrheic_dermatitis",
+      "title": "Clinical Severity and Outcome Measures in Seborrheic Dermatitis",
+      "url": "https://link.springer.com/content/pdf/10.1007/s13555-026-01743-9.pdf",
+      "credibility": "Open-access peer-reviewed systematic review of seborrheic dermatitis outcome measures",
+      "path": "clinical_docs/seborrheic_dermatitis_scoring_docs.pdf",
+      "status": "downloaded",
+      "bytes": 1507944
+    },
+    {
+      "doc_id": "contusion_assessment_references",
+      "condition": "bruising_contusions",
+      "title": "DermNet Bleeding and bruising",
+      "url": "https://dermnetnz.org/topics/bleeding-and-bruising",
+      "credibility": "DermNet dermatology reference",
+      "path": "clinical_docs/contusion_assessment_references.txt",
+      "status": "downloaded",
+      "bytes": 9706
+    },
+    {
+      "doc_id": "masi_mmasi_references",
+      "condition": "melasma",
+      "title": "DermNet Melasma",
+      "url": "https://dermnetnz.org/topics/melasma",
+      "credibility": "DermNet dermatology reference mentioning MASI and modified MASI for monitoring",
+      "path": "clinical_docs/masi_mmasi_references.txt",
+      "status": "downloaded",
+      "bytes": 11278
+    }
+  ],
+  "not_downloaded": [
+    {
+      "doc_id": "rosacea_grading_references",
+      "condition": "rosacea",
+      "title": "Standard grading system for rosacea: report of the National Rosacea Society Expert Committee on the classification and staging of rosacea",
+      "url": "https://www.rosacea.org/physicians/grading-system-for-rosacea/view-online",
+      "reason": "Credible source found, but page states the material may not be reproduced without prior written permission. I left it for user-provided download/permission rather than copying it locally.",
+      "credibility": "National Rosacea Society / JAAD grading system"
+    },
+    {
+      "doc_id": "seborrheic_dermatitis_scoring_docs_original",
+      "condition": "seborrheic_dermatitis",
+      "title": "A new proposed severity score for seborrheic dermatitis of the face: SEborrheic Dermatitis Area and Severity Index (SEDASI)",
+      "url": "https://www.jaad.org/article/S0190-9622(17)30575-3/fulltext",
+      "reason": "Direct JAAD PDF returned HTTP 403. Fallback downloaded: Springer open-access systematic review of seborrheic dermatitis severity/outcome measures.",
+      "credibility": "Journal of the American Academy of Dermatology article/abstract"
+    },
+    {
+      "doc_id": "masi_mmasi_references_original",
+      "condition": "melasma",
+      "title": "Interpretability of the Modified Melasma Area and Severity Index (mMASI)",
+      "url": "https://jamanetwork.com/journals/jamadermatology/fullarticle/2519450",
+      "reason": "JAMA page returned HTTP 403 to direct downloader. Fallback downloaded: DermNet melasma page; user can manually download/access JAMA article if desired.",
+      "credibility": "JAMA Dermatology article"
+    },
+    {
+      "doc_id": "masi_mmasi_validation_article",
+      "condition": "melasma",
+      "title": "Reliability assessment and validation of the Melasma Area and Severity Index (MASI) and a new modified MASI scoring method",
+      "url": "https://www.jaad.org/article/S0190-9622(09)02302-0/fulltext",
+      "reason": "Full text is publisher-hosted and may require access; not downloaded automatically.",
+      "credibility": "Journal of the American Academy of Dermatology validation article"
+    }
+  ]
+}

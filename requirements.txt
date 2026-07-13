@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+python-multipart
+torch
+torchvision
+pillow
+numpy
+requests
+streamlit
+segmentation-models-pytorch
+transformers
+matplotlib

@@ -1,0 +1,20 @@
+{
+  "0": "Healthy_Normal_Skin",
+  "1": "Pressure_Injury_(PI)",
+  "2": "Diabetic_Foot_Ulcers_(DFU)",
+  "3": "Venous_Leg_Ulcers_(VLU)",
+  "4": "Atopic_Dermatitis_(Eczema)",
+  "5": "Contact_Dermatitis",
+  "6": "Seborrheic_Dermatitis",
+  "7": "Acne",
+  "8": "Hidradenitis_Suppurativa_(HS)",
+  "9": "Sunburn",
+  "10": "Psoriasis",
+  "11": "Bruising-Contusions",
+  "12": "Melasma",
+  "13": "Cold_Injury",
+  "14": "Rosacea",
+  "15": "Surgical_Wounds",
+  "16": "Radiation_Injury",
+  "17": "Burn_Wounds"
+}

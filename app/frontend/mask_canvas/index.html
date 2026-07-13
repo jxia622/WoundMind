@@ -1,0 +1,292 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      #wrap {
+        position: relative;
+        display: inline-block;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #111827;
+      }
+
+      #toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 8px 0;
+        padding: 8px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #111827;
+        width: fit-content;
+      }
+
+      #toolbar label {
+        font-size: 13px;
+        color: #374151;
+      }
+
+      #brush-size {
+        width: 150px;
+      }
+
+      .tool-button {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #111827;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      .tool-button.active {
+        border-color: #2563eb;
+        background: #eff6ff;
+        color: #1d4ed8;
+      }
+
+      #clear {
+        border-color: #fecaca;
+        color: #991b1b;
+      }
+
+      canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        cursor: crosshair;
+        touch-action: none;
+      }
+
+      #base {
+        position: relative;
+        z-index: 0;
+      }
+
+      #mask {
+        z-index: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toolbar">
+      <label for="brush-size">Brush size</label>
+      <input id="brush-size" type="range" min="4" max="80" step="2" value="24" />
+      <span id="brush-label">24</span>
+      <button id="brush" class="tool-button active" type="button">Brush</button>
+      <button id="eraser" class="tool-button" type="button">Eraser</button>
+      <button id="clear" class="tool-button" type="button">X Clear</button>
+    </div>
+    <div id="wrap">
+      <canvas id="base"></canvas>
+      <canvas id="mask"></canvas>
+    </div>
+
+    <script>
+      const base = document.getElementById("base");
+      const mask = document.getElementById("mask");
+      const wrap = document.getElementById("wrap");
+      const baseCtx = base.getContext("2d");
+      const maskCtx = mask.getContext("2d");
+      const toolbar = document.getElementById("toolbar");
+      const brushSizeInput = document.getElementById("brush-size");
+      const brushLabel = document.getElementById("brush-label");
+      const brushButton = document.getElementById("brush");
+      const eraserButton = document.getElementById("eraser");
+      const clearButton = document.getElementById("clear");
+
+      let brushSize = 24;
+      let tool = "brush";
+      let drawing = false;
+      let lastPoint = null;
+      let imageDataUrl = null;
+
+      function streamlitMessage(type, data) {
+        window.parent.postMessage(
+          {
+            isStreamlitMessage: true,
+            type,
+            ...data,
+          },
+          "*"
+        );
+      }
+
+      function setFrameHeight() {
+        streamlitMessage("streamlit:setFrameHeight", {
+          height: wrap.offsetHeight + toolbar.offsetHeight + 18,
+        });
+      }
+
+      function sendValue() {
+        const exportCanvas = document.createElement("canvas");
+        exportCanvas.width = mask.width;
+        exportCanvas.height = mask.height;
+        const exportCtx = exportCanvas.getContext("2d");
+        const maskData = maskCtx.getImageData(0, 0, mask.width, mask.height);
+        const output = exportCtx.createImageData(mask.width, mask.height);
+
+        for (let i = 0; i < maskData.data.length; i += 4) {
+          const alpha = maskData.data[i + 3];
+          const value = alpha > 0 ? 255 : 0;
+          output.data[i] = value;
+          output.data[i + 1] = value;
+          output.data[i + 2] = value;
+          output.data[i + 3] = 255;
+        }
+
+        exportCtx.putImageData(output, 0, 0);
+        streamlitMessage("streamlit:setComponentValue", {
+          value: exportCanvas.toDataURL("image/png"),
+        });
+      }
+
+      function pointFromEvent(event) {
+        const rect = mask.getBoundingClientRect();
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top,
+        };
+      }
+
+      function drawSegment(from, to) {
+        maskCtx.save();
+        maskCtx.lineCap = "round";
+        maskCtx.lineJoin = "round";
+        maskCtx.lineWidth = brushSize;
+
+        if (tool === "eraser") {
+          maskCtx.globalCompositeOperation = "destination-out";
+          maskCtx.strokeStyle = "rgba(0,0,0,1)";
+        } else {
+          maskCtx.globalCompositeOperation = "source-over";
+          maskCtx.strokeStyle = "rgba(37, 99, 235, 0.45)";
+        }
+
+        maskCtx.beginPath();
+        maskCtx.moveTo(from.x, from.y);
+        maskCtx.lineTo(to.x, to.y);
+        maskCtx.stroke();
+        maskCtx.restore();
+      }
+
+      function startDrawing(event) {
+        event.preventDefault();
+        drawing = true;
+        lastPoint = pointFromEvent(event);
+        drawSegment(lastPoint, lastPoint);
+        sendValue();
+      }
+
+      function continueDrawing(event) {
+        if (!drawing) return;
+        event.preventDefault();
+        const nextPoint = pointFromEvent(event);
+        drawSegment(lastPoint, nextPoint);
+        lastPoint = nextPoint;
+      }
+
+      function stopDrawing(event) {
+        if (!drawing) return;
+        event.preventDefault();
+        drawing = false;
+        lastPoint = null;
+        sendValue();
+      }
+
+      function clearMask() {
+        maskCtx.clearRect(0, 0, mask.width, mask.height);
+        sendValue();
+      }
+
+      function setTool(nextTool) {
+        tool = nextTool;
+        brushButton.classList.toggle("active", tool === "brush");
+        eraserButton.classList.toggle("active", tool === "eraser");
+      }
+
+      function resizeCanvases(width, height) {
+        base.width = width;
+        base.height = height;
+        mask.width = width;
+        mask.height = height;
+        base.style.width = `${width}px`;
+        base.style.height = `${height}px`;
+        mask.style.width = `${width}px`;
+        mask.style.height = `${height}px`;
+        wrap.style.width = `${width}px`;
+        wrap.style.height = `${height}px`;
+      }
+
+      function renderImage(args) {
+        if (!args.image_data_url) return;
+
+        const width = args.width;
+        const height = args.height;
+
+        if (
+          args.image_data_url === imageDataUrl &&
+          base.width === width &&
+          base.height === height
+        ) {
+          return;
+        }
+
+        imageDataUrl = args.image_data_url;
+        resizeCanvases(width, height);
+
+        const img = new Image();
+        img.onload = () => {
+          baseCtx.clearRect(0, 0, width, height);
+          baseCtx.drawImage(img, 0, 0, width, height);
+          setFrameHeight();
+        };
+        img.src = imageDataUrl;
+      }
+
+      function render(args) {
+        renderImage(args);
+        setFrameHeight();
+      }
+
+      mask.addEventListener("mousedown", startDrawing);
+      mask.addEventListener("mousemove", continueDrawing);
+      window.addEventListener("mouseup", stopDrawing);
+      mask.addEventListener("touchstart", startDrawing, { passive: false });
+      mask.addEventListener("touchmove", continueDrawing, { passive: false });
+      window.addEventListener("touchend", stopDrawing, { passive: false });
+
+      window.addEventListener("message", (event) => {
+        if (event.data.type === "streamlit:render") {
+          render(event.data.args || {});
+        }
+      });
+
+      brushSizeInput.addEventListener("input", () => {
+        brushSize = Number(brushSizeInput.value);
+        brushLabel.textContent = String(brushSize);
+      });
+      brushButton.addEventListener("click", () => setTool("brush"));
+      eraserButton.addEventListener("click", () => setTool("eraser"));
+      clearButton.addEventListener("click", clearMask);
+
+      streamlitMessage("streamlit:componentReady", { apiVersion: 1 });
+      setFrameHeight();
+    </script>
+  </body>
+</html>
