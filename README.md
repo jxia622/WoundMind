@@ -9,6 +9,8 @@ WoundMind is a diagnostic assistant agent for wound assessment research. It comb
 
 ## Demo
 
+![WoundMind DFU Grade 3 demo](docs/assets/woundmind_dfu_grade3_demo.gif)
+
 [Watch the WoundMind DFU Grade 3 demo](docs/assets/woundmind_dfu_grade3_demo.webm)
 
 The demo uses a diabetic foot ulcer image and shows the local UI returning a DFU condition prediction, Grade 3 severity result, confidence/probability summaries, and the segmentation/depth review screen.
