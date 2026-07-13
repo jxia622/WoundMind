@@ -18,7 +18,7 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"
     />
-    <link rel="stylesheet" href="styles.css?v=20260713-4" />
+    <link rel="stylesheet" href="styles.css?v=20260713-5" />
   </head>
   <body>
     <main class="prototype-shell" id="app">
@@ -107,14 +107,22 @@
             <p class="section-label">Segmentation and depth review</p>
             <div class="analysis-preview-layout">
               <figure class="analysis-panel">
-                <img
-                  class="analysis-panel-image"
-                  id="analysis-mask-image"
-                  alt="Generated segmentation mask"
-                />
+                <div class="analysis-panel-frame mask-overlay-frame">
+                  <img
+                    class="analysis-panel-image"
+                    id="analysis-mask-original-image"
+                    alt="Original wound with segmentation mask overlay"
+                  />
+                  <img
+                    class="analysis-mask-tint-image"
+                    id="analysis-mask-tint-image"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                </div>
                 <figcaption>
                   <i class="ti ti-vector" aria-hidden="true"></i>
-                  Segmentation mask
+                  Segmentation overlay
                 </figcaption>
               </figure>
 
@@ -243,6 +251,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260713-4"></script>
+    <script src="app.js?v=20260713-5"></script>
   </body>
 </html>

@@ -21,6 +21,7 @@ const state = {
   busy: false,
   evaluating: false,
   evaluationTimer: null,
+  maskTintToken: 0,
 };
 
 const severityDescriptions = {
@@ -186,6 +187,37 @@ function previewDataUrl(preview) {
   return `data:${preview.mime_type || "image/png"};base64,${preview.data}`;
 }
 
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+async function createTintedMaskDataUrl(maskUrl) {
+  const image = await loadImage(maskUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+  for (let index = 0; index < data.length; index += 4) {
+    const intensity = Math.max(data[index], data[index + 1], data[index + 2]);
+    const alpha = intensity > 12 ? Math.max(72, Math.round((intensity / 255) * 154)) : 0;
+    data[index] = 72;
+    data[index + 1] = 190;
+    data[index + 2] = 255;
+    data[index + 3] = alpha;
+  }
+  context.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 function confidenceLevel(probability) {
   if (probability >= 0.8) return "High";
   if (probability >= 0.6) return "Moderate";
@@ -338,13 +370,28 @@ function renderCondition(condition) {
   );
 }
 
-function renderReview() {
-  const maskUrl = previewDataUrl(state.mask?.mask_preview || state.mask?.mask_overlay_preview);
+async function renderReview() {
+  const maskUrl = previewDataUrl(state.mask?.mask_preview);
   const depthUrl = previewDataUrl(state.depth?.depth_preview);
-  document.querySelector("#analysis-mask-image").src = maskUrl || "";
+  const maskToken = (state.maskTintToken += 1);
+  document.querySelector("#analysis-mask-original-image").src = state.originalUrl || "";
+  document.querySelector("#analysis-mask-tint-image").src = "";
   document.querySelector("#analysis-depth-image").src = depthUrl || "";
   document.querySelector("#mask-area").textContent = maskAreaText(state.mask);
   showSection("#review-card", true);
+  if (!maskUrl) return;
+
+  try {
+    const tintedMaskUrl = await createTintedMaskDataUrl(maskUrl);
+    if (maskToken === state.maskTintToken) {
+      document.querySelector("#analysis-mask-tint-image").src = tintedMaskUrl;
+    }
+  } catch {
+    if (maskToken === state.maskTintToken) {
+      document.querySelector("#analysis-mask-tint-image").src =
+        previewDataUrl(state.mask?.mask_overlay_preview) || "";
+    }
+  }
 }
 
 function renderSeverityProbabilities(severity, conditionLabel) {
@@ -574,7 +621,7 @@ async function runDownstreamForSelectedCondition() {
     depth_status: state.depth.depth_available ? "accepted" : "rejected",
   });
 
-  renderReview();
+  await renderReview();
   setActiveTrace("Visual review ready. Continue to evaluation when ready.", false);
 }
 
