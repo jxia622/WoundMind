@@ -9,21 +9,17 @@ const API_BASE =
   }:8000`;
 
 const state = {
-  currentScreen: 1,
   file: null,
   originalUrl: null,
-  analysis: null,
-  maskEnabled: true,
-  depthEnabled: true,
-  customMaskEnabled: false,
-  customMaskApplied: false,
-  customMaskBlob: null,
+  validation: null,
+  condition: null,
+  mask: null,
+  depth: null,
+  severity: null,
+  agent: null,
   busy: false,
-};
-
-const screenNames = {
-  1: "Upload & result",
-  2: "Analysis review",
+  evaluating: false,
+  evaluationTimer: null,
 };
 
 const severityDescriptions = {
@@ -60,36 +56,26 @@ const pressureInjuryStageLabels = {
 
 const dfuGradeOrder = ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"];
 
-const screens = [...document.querySelectorAll(".screen")];
+const workflowSteps = {
+  verify: "Verify image quality",
+  classify: "Classify wound condition",
+  route: "Check supported severity route",
+  segment: "Generate wound segmentation",
+  depth: "Estimate relative depth",
+};
+
+const evaluationTraceMessages = [
+  "Loading condition-specific evidence policy...",
+  "Retrieving clinical reference chunks...",
+  "Running segmentation and depth tools through the agent...",
+  "Routing severity model variant...",
+  "Checking staging against wound evidence verifier...",
+  "Preparing brief report...",
+];
+
 const fileInput = document.querySelector("#image-upload");
 const analyzeButton = document.querySelector("#analyze-image");
-const maskToggle = document.querySelector("#mask-enabled");
-const depthToggle = document.querySelector("#depth-enabled");
-const customMaskToggle = document.querySelector("#custom-mask-enabled");
-const customMaskEditor = document.querySelector("#custom-mask-editor");
-const resultContent = document.querySelector("#result-content");
-
-function setScreen(number) {
-  if (number < 1 || number > 2 || (number === 2 && !state.analysis)) return;
-  state.currentScreen = number;
-
-  screens.forEach((screen) => {
-    screen.hidden = Number(screen.dataset.screen) !== number;
-  });
-
-  document.querySelectorAll(".step-dot").forEach((dot, index) => {
-    const step = index + 1;
-    dot.classList.toggle("is-done", step < number);
-    dot.classList.toggle("is-active", step === number);
-  });
-
-  document.querySelector("#step-label").textContent =
-    `Step ${number} of 2 — ${screenNames[number]}`;
-  document.querySelector("#previous-screen").disabled = number === 1;
-  document.querySelector("#next-screen").disabled =
-    number === 2 || !state.analysis;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
+const continueEvaluationButton = document.querySelector("#continue-evaluation");
 
 function setApiStatus(status, label) {
   const statusElement = document.querySelector("#api-status");
@@ -97,19 +83,53 @@ function setApiStatus(status, label) {
   statusElement.lastChild.textContent = ` ${label}`;
 }
 
-function setBusy(isBusy, label = "Analyzing image…") {
+function setBusy(isBusy) {
   state.busy = isBusy;
   analyzeButton.disabled = isBusy || !state.file;
-  fileInput.disabled = isBusy;
-  const progress = document.querySelector("#analysis-progress");
-  progress.hidden = !isBusy;
-  document.querySelector("#analysis-progress-text").textContent = label;
+  fileInput.disabled = isBusy || state.evaluating;
+}
+
+function setEvaluating(isEvaluating) {
+  state.evaluating = isEvaluating;
+  continueEvaluationButton.disabled = isEvaluating;
+  analyzeButton.disabled = isEvaluating || state.busy || !state.file;
+  document.querySelector("#evaluation-spinner").hidden = !isEvaluating;
 }
 
 function showError(message) {
   const error = document.querySelector("#analysis-error");
   document.querySelector("#analysis-error-text").textContent = message;
   error.hidden = !message;
+}
+
+function showSection(selector, visible = true) {
+  document.querySelector(selector).hidden = !visible;
+}
+
+function setActiveTrace(text, spinning = true) {
+  showSection("#trace-card", true);
+  document.querySelector("#active-trace-text").textContent = text;
+  document.querySelector("#workflow-spinner").hidden = !spinning;
+}
+
+function addTimelineStep(id, label, status = "running", detail = "") {
+  const list = document.querySelector("#workflow-timeline");
+  let item = list.querySelector(`[data-step="${id}"]`);
+  if (!item) {
+    item = document.createElement("li");
+    item.dataset.step = id;
+    item.innerHTML = `
+      <span class="timeline-icon"></span>
+      <span class="timeline-copy">
+        <strong></strong>
+        <small></small>
+      </span>
+    `;
+    list.append(item);
+  }
+  item.dataset.status = status;
+  item.querySelector("strong").textContent = label;
+  item.querySelector("small").textContent = detail;
 }
 
 function prettyCondition(value = "") {
@@ -122,6 +142,16 @@ function prettyCondition(value = "") {
     .replace(/\bVlu\b/g, "VLU");
 }
 
+function isSupportedSeverityCondition(condition = "") {
+  const normalized = condition.toLowerCase();
+  return (
+    normalized.includes("diabetic_foot") ||
+    normalized.includes("dfu") ||
+    normalized.includes("pressure_injury") ||
+    normalized.includes("pressure injury")
+  );
+}
+
 function previewDataUrl(preview) {
   if (!preview?.data) return null;
   return `data:${preview.mime_type || "image/png"};base64,${preview.data}`;
@@ -131,6 +161,11 @@ function confidenceLevel(probability) {
   if (probability >= 0.8) return "High";
   if (probability >= 0.6) return "Moderate";
   return "Low";
+}
+
+function formatPercent(probability) {
+  if (probability == null || Number.isNaN(Number(probability))) return "-";
+  return `${Math.round(Number(probability) * 100)}%`;
 }
 
 function setConfidence(level) {
@@ -190,106 +225,6 @@ function maskAreaText(mask) {
   return `${Number(mask.mask_area_pixels).toLocaleString()} px²`;
 }
 
-function renderAnalysis(payload, preserveInputChoices = false) {
-  state.analysis = payload;
-  const condition = payload.condition || {};
-  const severity = payload.severity || {};
-  const mask = payload.mask || {};
-  const depth = payload.depth || {};
-  const conditionLabel = prettyCondition(condition.top1_label || "Unknown condition");
-
-  document.querySelector("#condition-name").textContent = conditionLabel;
-  document.querySelector("#inspector-badge").textContent = conditionLabel;
-  document.querySelector(".badge-warning")?.remove();
-
-  document.querySelector("#result-image").src = state.originalUrl;
-  document.querySelector("#analysis-original-image").src = state.originalUrl;
-
-  const maskUrl = previewDataUrl(mask.mask_overlay_preview);
-  const depthUrl = previewDataUrl(depth.depth_preview);
-  const maskImage = document.querySelector("#analysis-mask-image");
-  const depthImage = document.querySelector("#analysis-depth-image");
-  maskImage.src = maskUrl || "";
-  depthImage.src = depthUrl || "";
-  document.querySelector("#hold-mask-overlay").disabled = !maskUrl;
-  document.querySelector("#hold-depth-map").disabled = !depthUrl;
-  document.querySelector("#mask-area").textContent = maskAreaText(mask);
-
-  renderProbabilityList(
-    document.querySelector("#condition-probabilities"),
-    (condition.top3 || []).map((item) => ({
-      label: prettyCondition(item.class_name),
-      probability: item.probability,
-    })),
-    conditionLabel,
-    { highlightFirst: true },
-  );
-
-  const severityCard = document.querySelector("#severity-probability-card");
-  const unavailable = document.querySelector("#severity-unavailable");
-  if (severity.severity_available) {
-    const prediction = severity.severity_prediction || "Severity unavailable";
-    const isPressureInjury = /pressure injury/i.test(conditionLabel);
-    const displayedPrediction = isPressureInjury
-      ? pressureInjuryStageLabels[prediction] || prediction
-      : prediction;
-    document.querySelector("#severity-label").textContent = displayedPrediction;
-    document.querySelector("#severity-description").textContent =
-      severityDescriptions[prediction] || "Model-generated severity classification";
-    setConfidence(confidenceLevel(Number(severity.severity_confidence) || 0));
-    const classProbabilities = severity.class_probabilities || {};
-    const classOrder = isPressureInjury ? pressureInjuryStageOrder : dfuGradeOrder;
-    const probabilities = classOrder
-      .filter((key) => Object.hasOwn(classProbabilities, key))
-      .map((key) => ({
-        key,
-        label: isPressureInjury ? pressureInjuryStageLabels[key] : key,
-        probability: classProbabilities[key],
-      }));
-    renderProbabilityList(
-      document.querySelector("#severity-probabilities"),
-      probabilities,
-      prediction,
-    );
-    document.querySelector("#severity-probability-title").textContent =
-      prediction.startsWith("Grade") ? "Grade probabilities" : "Stage probabilities";
-    severityCard.hidden = false;
-    unavailable.hidden = true;
-  } else {
-    document.querySelector("#severity-label").textContent = "Not available";
-    document.querySelector("#severity-description").textContent =
-      severity.message || "Severity model is not available for this condition.";
-    setConfidence(condition.confidence_level || "Low");
-    severityCard.hidden = true;
-    document.querySelector("#severity-unavailable-text").textContent =
-      severity.message || "Severity model for this condition is still under development.";
-    unavailable.hidden = false;
-  }
-
-  const warnings = [
-    ...(payload.validation?.warnings || []),
-    ...(mask.warnings || []),
-    ...(depth.warnings || []),
-    severity.warning,
-  ].filter(Boolean);
-  const warningBox = document.querySelector("#validation-warning");
-  document.querySelector("#validation-warning-text").textContent = warnings.join(" ");
-  warningBox.hidden = warnings.length === 0;
-
-  if (!preserveInputChoices) {
-    state.maskEnabled = Boolean(mask.mask_available);
-    state.depthEnabled = Boolean(depth.depth_available);
-    maskToggle.checked = state.maskEnabled;
-    depthToggle.checked = state.depthEnabled;
-    maskToggle.disabled = !mask.mask_available;
-    depthToggle.disabled = !depth.depth_available;
-  }
-  document.querySelector("#update-severity").disabled = !severity.severity_available;
-
-  resultContent.hidden = false;
-  document.querySelector("#next-screen").disabled = false;
-}
-
 async function parseResponse(response) {
   let payload;
   try {
@@ -307,13 +242,10 @@ async function parseResponse(response) {
   return payload;
 }
 
-async function postImage(endpoint, extraData = {}, extraFiles = {}) {
+async function postImage(endpoint, fieldName = "file", extraData = {}) {
   const form = new FormData();
-  form.append("file", state.file, state.file.name);
+  form.append(fieldName, state.file, state.file.name);
   Object.entries(extraData).forEach(([key, value]) => form.append(key, value));
-  Object.entries(extraFiles).forEach(([key, value]) => {
-    form.append(key, value, `${key}.png`);
-  });
   return parseResponse(
     await fetch(`${API_BASE}${endpoint}`, {
       method: "POST",
@@ -322,62 +254,292 @@ async function postImage(endpoint, extraData = {}, extraFiles = {}) {
   );
 }
 
-async function analyzeImage() {
-  if (!state.file || state.busy) return;
+function resetWorkflowOutput() {
+  state.validation = null;
+  state.condition = null;
+  state.mask = null;
+  state.depth = null;
+  state.severity = null;
+  state.agent = null;
+  window.clearInterval(state.evaluationTimer);
+  state.evaluationTimer = null;
+
+  [
+    "#trace-card",
+    "#quality-card",
+    "#condition-card",
+    "#review-card",
+    "#evaluation-card",
+    "#final-result",
+    "#condition-stop",
+    "#validation-warning",
+    "#verifier-citation",
+    "#verifier-flags",
+  ].forEach((selector) => showSection(selector, false));
+  document.querySelector("#workflow-timeline").replaceChildren();
+  document.querySelector("#agent-trace-list").replaceChildren();
   showError("");
-  setBusy(true, "Running condition, segmentation, depth, and severity models…");
+}
+
+function renderValidation(validation) {
+  showSection("#quality-card", true);
+  document.querySelector("#quality-status").textContent = validation.passed
+    ? "Passed"
+    : "Needs review";
+  document.querySelector("#blur-score").textContent =
+    validation.blur_score == null ? "-" : Number(validation.blur_score).toFixed(1);
+  const warnings = validation.warnings || [];
+  document.querySelector("#validation-warning-text").textContent = warnings.join(" ");
+  showSection("#validation-warning", warnings.length > 0);
+}
+
+function renderCondition(condition) {
+  const conditionLabel = prettyCondition(condition.top1_label || "Unknown condition");
+  showSection("#condition-card", true);
+  document.querySelector("#condition-name").textContent = conditionLabel;
+  document.querySelector("#condition-confidence").textContent =
+    `Confidence ${formatPercent(condition.confidence)} - ${condition.confidence_level || confidenceLevel(condition.confidence)}`;
+  document.querySelector("#result-image").src = state.originalUrl;
+  renderProbabilityList(
+    document.querySelector("#condition-probabilities"),
+    (condition.top3 || []).map((item) => ({
+      label: prettyCondition(item.class_name),
+      probability: item.probability,
+    })),
+    conditionLabel,
+    { highlightFirst: true },
+  );
+}
+
+function renderReview() {
+  const maskUrl = previewDataUrl(state.mask?.mask_overlay_preview);
+  const depthUrl = previewDataUrl(state.depth?.depth_preview);
+  document.querySelector("#analysis-original-image").src = state.originalUrl;
+  document.querySelector("#analysis-mask-image").src = maskUrl || "";
+  document.querySelector("#analysis-depth-image").src = depthUrl || "";
+  document.querySelector("#hold-mask-overlay").disabled = !maskUrl;
+  document.querySelector("#hold-depth-map").disabled = !depthUrl;
+  document.querySelector("#mask-area").textContent = maskAreaText(state.mask);
+  showSection("#review-card", true);
+}
+
+function renderSeverityProbabilities(severity, conditionLabel) {
+  const isPressureInjury = /pressure injury/i.test(conditionLabel);
+  const classProbabilities = severity.class_probabilities || {};
+  const classOrder = isPressureInjury ? pressureInjuryStageOrder : dfuGradeOrder;
+  const probabilities = classOrder
+    .filter((key) => Object.hasOwn(classProbabilities, key))
+    .map((key) => ({
+      key,
+      label: isPressureInjury ? pressureInjuryStageLabels[key] : key,
+      probability: classProbabilities[key],
+    }));
+  renderProbabilityList(
+    document.querySelector("#severity-probabilities"),
+    probabilities,
+    severity.severity_prediction,
+  );
+  document.querySelector("#severity-probability-title").textContent =
+    (severity.severity_prediction || "").startsWith("Grade")
+      ? "Grade probabilities"
+      : "Stage probabilities";
+}
+
+function traceOutputLine(step) {
+  const output = step.outputs_summary || {};
+  if (step.tool === "classify_condition") {
+    return `${prettyCondition(output.top1_label)} (${formatPercent(output.confidence)})`;
+  }
+  if (step.tool === "predict_severity") {
+    return `${output.severity_prediction || "No severity"} via ${output.model_used || "route"}`;
+  }
+  if (step.tool === "verify_assessment") {
+    return output.result || output.flag || "Verification complete";
+  }
+  if (step.tool === "retrieve_docs") {
+    return `${(output.chunks || []).length} evidence chunks`;
+  }
+  if (step.tool === "segment_wound") {
+    return output.mask_available ? "Mask generated" : "Mask unavailable";
+  }
+  if (step.tool === "depth_map") {
+    return output.depth_available ? "Depth map generated" : "Depth unavailable";
+  }
+  return Object.keys(output).length ? "Complete" : "";
+}
+
+function renderAgentTrace(trace = []) {
+  const list = document.querySelector("#agent-trace-list");
+  list.replaceChildren();
+  trace.forEach((step) => {
+    const item = document.createElement("li");
+    item.dataset.status = "done";
+    item.innerHTML = `
+      <span class="timeline-icon"></span>
+      <span class="timeline-copy">
+        <strong></strong>
+        <small></small>
+      </span>
+    `;
+    item.querySelector("strong").textContent = step.tool.replaceAll("_", " ");
+    item.querySelector("small").textContent = traceOutputLine(step);
+    list.append(item);
+  });
+}
+
+function briefReport(output, severity) {
+  const stage = output.severity_stage || severity?.severity_prediction || "No verified stage";
+  const condition = prettyCondition(output.condition || state.condition?.top1_label || "condition");
+  const confidence = output.severity_confidence ?? severity?.severity_confidence;
+  const verifier = output.verifier_result || "UNCERTAIN";
+  const modelVariant = output.model_variant_used || severity?.model_used;
+  const modelLine = modelVariant ? ` using ${modelVariant}` : "";
+  return `${condition} was routed through the implemented severity workflow${modelLine}. The model suggests ${stage} with ${formatPercent(confidence)} severity confidence, and the evidence verifier returned ${verifier}.`;
+}
+
+function renderFinalResult(agentPayload) {
+  const output = agentPayload.output || {};
+  const severity = state.severity || {};
+  const conditionLabel = prettyCondition(output.condition || state.condition?.top1_label || "Condition");
+  const stage = output.severity_stage || severity.severity_prediction || "Not verified";
+  const displayedStage = /pressure injury/i.test(conditionLabel)
+    ? pressureInjuryStageLabels[stage] || stage
+    : stage;
+
+  document.querySelector("#final-condition-label").textContent = conditionLabel;
+  document.querySelector("#severity-label").textContent = displayedStage;
+  document.querySelector("#severity-description").textContent =
+    severityDescriptions[stage] || "Evidence verifier completed.";
+  setConfidence(confidenceLevel(output.severity_confidence ?? severity.severity_confidence ?? 0));
+  renderSeverityProbabilities(severity, conditionLabel);
+
+  document.querySelector("#brief-report").textContent = briefReport(output, severity);
+  document.querySelector("#verifier-result").textContent = output.verifier_result || "-";
+  document.querySelector("#model-variant").textContent =
+    output.model_variant_used || severity.model_used || "-";
+
+  document.querySelector("#verifier-citation-text").textContent = output.citation || "";
+  showSection("#verifier-citation", Boolean(output.citation));
+  const flags = output.flags || [];
+  document.querySelector("#verifier-flags-text").textContent = flags.join(" ");
+  showSection("#verifier-flags", flags.length > 0);
+  showSection("#final-result", true);
+}
+
+async function runInitialAnalysis() {
+  if (!state.file || state.busy) return;
+  resetWorkflowOutput();
+  setBusy(true);
+  showError("");
 
   try {
-    const payload = await postImage("/analyze");
-    renderAnalysis(payload);
+    setActiveTrace("Verifying image quality...");
+    addTimelineStep("verify", workflowSteps.verify, "running", "Checking dimensions, format, and blur score");
+    state.validation = await postImage("/validate-image");
+    renderValidation(state.validation);
+    addTimelineStep(
+      "verify",
+      workflowSteps.verify,
+      state.validation.passed ? "done" : "warning",
+      state.validation.passed ? "Image quality passed" : "Warnings found",
+    );
+
+    setActiveTrace("Classifying wound condition...");
+    addTimelineStep("classify", workflowSteps.classify, "running", "Running condition classifier");
+    state.condition = await postImage("/predict-condition");
+    renderCondition(state.condition);
+    addTimelineStep(
+      "classify",
+      workflowSteps.classify,
+      "done",
+      `${prettyCondition(state.condition.top1_label)} - ${formatPercent(state.condition.confidence)}`,
+    );
+
+    setActiveTrace("Checking whether downstream severity workflow is available...");
+    addTimelineStep("route", workflowSteps.route, "running", "DFU and pressure injury are currently supported");
+    if (!isSupportedSeverityCondition(state.condition.top1_label)) {
+      addTimelineStep("route", workflowSteps.route, "warning", "Workflow stops after classification");
+      showSection("#condition-stop", true);
+      setActiveTrace("Classification complete. Severity workflow is not built for this condition yet.", false);
+      return;
+    }
+    addTimelineStep("route", workflowSteps.route, "done", "Severity workflow available");
+
+    setActiveTrace("Generating wound segmentation...");
+    addTimelineStep("segment", workflowSteps.segment, "running", "Running U-Net++ mask model");
+    state.mask = await postImage("/generate-mask", "file", { case_id: state.condition.case_id });
+    addTimelineStep(
+      "segment",
+      workflowSteps.segment,
+      state.mask.mask_available ? "done" : "warning",
+      state.mask.mask_available ? "Mask overlay ready" : "Mask unavailable",
+    );
+
+    setActiveTrace("Estimating relative depth map...");
+    addTimelineStep("depth", workflowSteps.depth, "running", "Running Depth Anything V2");
+    state.depth = await postImage("/generate-depth", "file", { case_id: state.condition.case_id });
+    addTimelineStep(
+      "depth",
+      workflowSteps.depth,
+      state.depth.depth_available ? "done" : "warning",
+      state.depth.depth_available ? "Depth preview ready" : "Depth unavailable",
+    );
+
+    state.severity = await postImage("/predict-severity", "file", {
+      selected_condition: state.condition.top1_label,
+      condition_source: "model_accepted",
+      mask_status: state.mask.mask_available ? "accepted" : "none",
+      depth_status: state.depth.depth_available ? "accepted" : "rejected",
+    });
+
+    renderReview();
+    setActiveTrace("Visual review ready. Continue to evaluation when ready.", false);
     setApiStatus("online", "API connected");
   } catch (error) {
     showError(error.message || "Analysis failed.");
     setApiStatus("offline", "API unavailable");
+    setActiveTrace("Workflow stopped because a request failed.", false);
   } finally {
     setBusy(false);
   }
 }
 
-async function updateSeverity() {
-  if (!state.analysis || state.busy) return;
-  const condition = state.analysis.condition;
-  const maskStatus = state.customMaskApplied
-    ? "custom"
-    : state.maskEnabled
-      ? "accepted"
-      : "none";
-  const depthStatus = state.depthEnabled ? "accepted" : "rejected";
-  const button = document.querySelector("#update-severity");
-  const status = document.querySelector("#severity-update-status");
+function startEvaluationTrace() {
+  let index = 0;
+  showSection("#evaluation-card", true);
+  document.querySelector("#evaluation-trace-text").textContent = evaluationTraceMessages[0];
+  document.querySelector("#agent-trace-list").replaceChildren();
+  state.evaluationTimer = window.setInterval(() => {
+    index = Math.min(index + 1, evaluationTraceMessages.length - 1);
+    document.querySelector("#evaluation-trace-text").textContent =
+      evaluationTraceMessages[index];
+  }, 1300);
+}
 
-  button.disabled = true;
-  status.textContent = "Updating severity model…";
+async function continueToEvaluation() {
+  if (!state.file || state.evaluating) return;
+  setEvaluating(true);
+  startEvaluationTrace();
+  showSection("#final-result", false);
+
   try {
-    const files = {};
-    if (maskStatus === "custom" && state.customMaskBlob) {
-      files.mask_file = state.customMaskBlob;
-    }
-    const severity = await postImage(
-      "/predict-severity",
-      {
-        selected_condition: condition.top1_label,
-        condition_source: "model_accepted",
-        mask_status: maskStatus,
-        depth_status: depthStatus,
-      },
-      files,
-    );
-    state.analysis.severity = severity;
-    renderAnalysis(state.analysis, true);
-    status.textContent = severity.severity_available
-      ? `Updated using ${severity.input_channels_used.join(" + ")}.`
-      : severity.message;
-    setScreen(1);
+    state.agent = await postImage("/agent/analyze", "image", {
+      case_id: state.condition?.case_id || "",
+    });
+    window.clearInterval(state.evaluationTimer);
+    state.evaluationTimer = null;
+    document.querySelector("#evaluation-trace-text").textContent =
+      "Evidence verifier complete.";
+    renderAgentTrace(state.agent.output?.agent_trace || []);
+    renderFinalResult(state.agent);
+    setApiStatus("online", "API connected");
   } catch (error) {
-    status.textContent = `Could not update severity: ${error.message}`;
+    showError(error.message || "Evaluation failed.");
+    document.querySelector("#evaluation-trace-text").textContent =
+      "Evaluation failed.";
+    setApiStatus("offline", "API unavailable");
   } finally {
-    button.disabled = false;
+    setEvaluating(false);
   }
 }
 
@@ -438,126 +600,6 @@ function configureHoldPreview({
   button.addEventListener("blur", () => setActive(false));
 }
 
-function drawUploadedImageOnCanvas() {
-  if (!state.originalUrl) return;
-  const canvas = document.querySelector("#mask-base-canvas");
-  const drawCanvas = document.querySelector("#mask-draw-canvas");
-  const image = new Image();
-  image.onload = () => {
-    const maxWidth = 600;
-    const maxHeight = 380;
-    const scale = Math.min(maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
-    const width = Math.max(1, Math.round(image.naturalWidth * scale));
-    const height = Math.max(1, Math.round(image.naturalHeight * scale));
-    canvas.width = width;
-    canvas.height = height;
-    drawCanvas.width = width;
-    drawCanvas.height = height;
-    document.querySelector("#draw-canvas-wrap").style.aspectRatio = `${width} / ${height}`;
-    canvas.getContext("2d").drawImage(image, 0, 0, width, height);
-    drawCanvas.getContext("2d").clearRect(0, 0, width, height);
-  };
-  image.src = state.originalUrl;
-}
-
-function exportCustomMask() {
-  const source = document.querySelector("#mask-draw-canvas");
-  const sourceContext = source.getContext("2d");
-  const pixels = sourceContext.getImageData(0, 0, source.width, source.height).data;
-  const output = document.createElement("canvas");
-  output.width = source.width;
-  output.height = source.height;
-  const outputContext = output.getContext("2d");
-  const mask = outputContext.createImageData(output.width, output.height);
-  for (let index = 0; index < pixels.length; index += 4) {
-    const value = pixels[index + 3] > 0 ? 255 : 0;
-    mask.data[index] = value;
-    mask.data[index + 1] = value;
-    mask.data[index + 2] = value;
-    mask.data[index + 3] = 255;
-  }
-  outputContext.putImageData(mask, 0, 0);
-  return new Promise((resolve) => output.toBlob(resolve, "image/png"));
-}
-
-function configureMaskDrawing() {
-  const canvas = document.querySelector("#mask-draw-canvas");
-  const ctx = canvas.getContext("2d");
-  const brushButton = document.querySelector("#draw-brush");
-  const eraserButton = document.querySelector("#draw-eraser");
-  const sizeInput = document.querySelector("#brush-size");
-  let drawing = false;
-  let tool = "brush";
-  let previousPoint = null;
-
-  function setTool(value) {
-    tool = value;
-    brushButton.classList.toggle("is-active", value === "brush");
-    eraserButton.classList.toggle("is-active", value === "eraser");
-  }
-
-  function pointFromEvent(event) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
-    };
-  }
-
-  function drawSegment(from, to) {
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = Number(sizeInput.value);
-    if (tool === "eraser") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.strokeStyle = "#000000";
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-      ctx.strokeStyle = "rgba(55, 138, 221, 0.55)";
-    }
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  canvas.addEventListener("pointerdown", (event) => {
-    event.preventDefault();
-    drawing = true;
-    previousPoint = pointFromEvent(event);
-    drawSegment(previousPoint, previousPoint);
-    canvas.setPointerCapture?.(event.pointerId);
-  });
-  canvas.addEventListener("pointermove", (event) => {
-    if (!drawing) return;
-    event.preventDefault();
-    const nextPoint = pointFromEvent(event);
-    drawSegment(previousPoint, nextPoint);
-    previousPoint = nextPoint;
-  });
-  window.addEventListener("pointerup", () => {
-    drawing = false;
-    previousPoint = null;
-  });
-
-  brushButton.addEventListener("click", () => setTool("brush"));
-  eraserButton.addEventListener("click", () => setTool("eraser"));
-  document.querySelector("#clear-mask").addEventListener("click", () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    state.customMaskApplied = false;
-    state.customMaskBlob = null;
-    document.querySelector("#mask-apply-status").textContent = "";
-  });
-  document.querySelector("#apply-mask").addEventListener("click", async () => {
-    state.customMaskBlob = await exportCustomMask();
-    state.customMaskApplied = Boolean(state.customMaskBlob);
-    document.querySelector("#mask-apply-status").textContent =
-      "Custom mask ready. Select Update severity result to use it.";
-  });
-}
-
 async function checkApi() {
   try {
     const response = await fetch(`${API_BASE}/health`);
@@ -571,58 +613,18 @@ async function checkApi() {
 fileInput.addEventListener("change", () => {
   const [file] = fileInput.files;
   if (!file) return;
+  resetWorkflowOutput();
   state.file = file;
-  state.analysis = null;
-  state.customMaskApplied = false;
-  state.customMaskBlob = null;
   if (state.originalUrl) URL.revokeObjectURL(state.originalUrl);
   state.originalUrl = URL.createObjectURL(file);
   document.querySelector("#selected-file-name").textContent = file.name;
   document.querySelector("#selected-file").hidden = false;
   analyzeButton.disabled = false;
-  resultContent.hidden = true;
-  document.querySelector("#next-screen").disabled = true;
   showError("");
-  drawUploadedImageOnCanvas();
 });
 
-analyzeButton.addEventListener("click", analyzeImage);
-document.querySelector("#inspect-reasoning").addEventListener("click", () => setScreen(2));
-document.querySelector("#inspector-back").addEventListener("click", () => setScreen(1));
-document.querySelector("#back-to-result").addEventListener("click", () => setScreen(1));
-document.querySelector("#previous-screen").addEventListener("click", () => {
-  setScreen(state.currentScreen - 1);
-});
-document.querySelector("#next-screen").addEventListener("click", () => {
-  setScreen(state.currentScreen + 1);
-});
-document.querySelector("#update-severity").addEventListener("click", updateSeverity);
-
-maskToggle.addEventListener("change", () => {
-  state.maskEnabled = maskToggle.checked;
-  if (!state.maskEnabled) {
-    customMaskToggle.checked = false;
-    state.customMaskEnabled = false;
-    state.customMaskApplied = false;
-    state.customMaskBlob = null;
-    customMaskEditor.hidden = true;
-  }
-});
-depthToggle.addEventListener("change", () => {
-  state.depthEnabled = depthToggle.checked;
-});
-customMaskToggle.addEventListener("change", () => {
-  state.customMaskEnabled = customMaskToggle.checked;
-  customMaskEditor.hidden = !state.customMaskEnabled;
-  if (state.customMaskEnabled) {
-    maskToggle.checked = true;
-    state.maskEnabled = true;
-    drawUploadedImageOnCanvas();
-  } else {
-    state.customMaskApplied = false;
-    state.customMaskBlob = null;
-  }
-});
+analyzeButton.addEventListener("click", runInitialAnalysis);
+continueEvaluationButton.addEventListener("click", continueToEvaluation);
 
 configureHoldPreview({
   buttonSelector: "#hold-mask-overlay",
@@ -640,6 +642,4 @@ configureHoldPreview({
   activeText: "Depth map",
   clearClasses: ["is-showing-mask"],
 });
-configureMaskDrawing();
-setScreen(1);
 checkApi();
