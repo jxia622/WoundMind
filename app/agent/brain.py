@@ -39,8 +39,10 @@ class WoundMindAgent:
     ) -> None:
         self.pipeline = pipeline
         self.config = config or AgentConfig.from_env()
-        self.memory = memory or ClinicalMemory(self.config)
-        self.tools = AgentTools(pipeline=pipeline, memory=self.memory)
+        self.memory = memory or (
+            ClinicalMemory(self.config) if self.config.literature_backend == "local" else None
+        )
+        self.tools = AgentTools(pipeline=pipeline, config=self.config, memory=self.memory)
         self.verifier = AssessmentVerifier(self.config)
         self.case_logger = CaseArtifactLogger(self.config)
         self.policy_registry = load_condition_policy_registry()
@@ -251,10 +253,15 @@ class WoundMindAgent:
                 )
             policy_doc_ids = state.tool_plan.get("clinical_doc_ids", [])
             if policy_doc_ids and not state.doc_chunks:
-                flags.append(
-                    "No indexed clinical chunks matched policy document IDs: "
-                    f"{', '.join(policy_doc_ids)}."
-                )
+                if self.config.literature_backend == "local":
+                    flags.append(
+                        "No indexed clinical chunks matched policy document IDs: "
+                        f"{', '.join(policy_doc_ids)}."
+                    )
+                else:
+                    flags.append(
+                        "No PubMed MCP literature results were retrieved for the policy query."
+                    )
 
         stage = self._stage_for_output(state)
         if verifier and verifier.result == "UNCERTAIN":

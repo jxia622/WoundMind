@@ -7,13 +7,23 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from app.agent.memory import ClinicalMemory
+from app.agent.config import AgentConfig
+from app.agent.pubmed_mcp import PubMedMCPRetriever
 from app.agent.schemas import DocumentChunk
 
 
 class AgentTools:
-    def __init__(self, pipeline, memory: ClinicalMemory | None = None) -> None:
+    def __init__(
+        self,
+        pipeline,
+        config: AgentConfig | None = None,
+        memory: ClinicalMemory | None = None,
+        literature_retriever: PubMedMCPRetriever | None = None,
+    ) -> None:
         self.pipeline = pipeline
-        self.memory = memory or ClinicalMemory()
+        self.config = config or AgentConfig.from_env()
+        self.memory = memory
+        self.literature_retriever = literature_retriever or PubMedMCPRetriever(self.config)
 
     async def segment_wound(self, image: Image.Image) -> dict[str, Any]:
         result = await asyncio.to_thread(self.pipeline.segmentation_model.predict, image)
@@ -71,13 +81,23 @@ class AgentTools:
         top_k: int = 4,
         allowed_doc_ids: list[str] | None = None,
     ) -> list[DocumentChunk]:
-        return await asyncio.to_thread(
-            self.memory.retrieve,
-            query,
-            condition,
-            top_k,
-            allowed_doc_ids,
-        )
+        if self.config.literature_backend == "local":
+            memory = self.memory or ClinicalMemory(self.config)
+            return await asyncio.to_thread(
+                memory.retrieve,
+                query,
+                condition,
+                top_k,
+                allowed_doc_ids,
+            )
+        if self.config.literature_backend != "pubmed_mcp":
+            raise RuntimeError(
+                f"Unsupported literature retrieval backend: {self.config.literature_backend}"
+            )
+        # PubMed MCP is the runtime evidence source. Policy doc IDs are local
+        # corpus hints, so they are intentionally not applied to live PubMed.
+        _ = allowed_doc_ids
+        return await self.literature_retriever.retrieve(query, condition, top_k)
 
     async def ask_clinician(self, question: str, patient_context: dict[str, Any]) -> str:
         lower = question.lower()
@@ -149,7 +169,7 @@ TOOL_SCHEMAS = [
     },
     {
         "name": "retrieve_docs",
-        "description": "Retrieve clinical reference chunks for staging verification.",
+        "description": "Retrieve PubMed literature through the PubMed clinical MCP for staging verification.",
     },
     {
         "name": "ask_clinician",

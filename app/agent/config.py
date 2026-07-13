@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,6 +14,11 @@ class AgentConfig:
     agent_model: str
     verifier_model: str
     embedding_model: str
+    literature_backend: str
+    pubmed_mcp_project_path: Path
+    pubmed_mcp_python: str
+    pubmed_mcp_timeout_seconds: int
+    pubmed_mcp_max_results: int
     chroma_db_path: Path
     clinical_docs_path: Path
     case_artifacts_path: Path
@@ -31,6 +37,16 @@ class AgentConfig:
             agent_model=os.getenv("AGENT_MODEL", "gpt-4o"),
             verifier_model=os.getenv("VERIFIER_MODEL", "gpt-4o"),
             embedding_model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+            literature_backend=os.getenv("LITERATURE_RETRIEVAL_BACKEND", "pubmed_mcp"),
+            pubmed_mcp_project_path=Path(
+                os.getenv(
+                    "PUBMED_MCP_PROJECT_PATH",
+                    str(PROJECT_ROOT.parent / "pubmed-clinical-mcp"),
+                )
+            ),
+            pubmed_mcp_python=os.getenv("PUBMED_MCP_PYTHON", sys.executable),
+            pubmed_mcp_timeout_seconds=int(os.getenv("PUBMED_MCP_TIMEOUT_SECONDS", "45")),
+            pubmed_mcp_max_results=int(os.getenv("PUBMED_MCP_MAX_RESULTS", "8")),
             chroma_db_path=Path(os.getenv("CHROMA_DB_PATH", str(PROJECT_ROOT / "chroma_db"))),
             clinical_docs_path=Path(
                 os.getenv("CLINICAL_DOCS_PATH", str(PROJECT_ROOT / "clinical_docs"))
