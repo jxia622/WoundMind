@@ -14,6 +14,12 @@ fi
 
 mkdir -p "$LOG_DIR"
 
+if [[ -f "$PROJECT_DIR/.env" ]]; then
+  set -a
+  source "$PROJECT_DIR/.env"
+  set +a
+fi
+
 (
   cd "$PROJECT_DIR"
   "$PYTHON_BIN" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 \

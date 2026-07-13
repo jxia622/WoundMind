@@ -8,6 +8,21 @@ from pathlib import Path
 from app.config import PROJECT_ROOT
 
 
+def load_project_env(path: Path | None = None) -> None:
+    env_path = path or PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("\"'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 @dataclass(frozen=True)
 class AgentConfig:
     model_provider: str
@@ -32,6 +47,7 @@ class AgentConfig:
 
     @classmethod
     def from_env(cls) -> "AgentConfig":
+        load_project_env()
         return cls(
             model_provider=os.getenv("AGENT_MODEL_PROVIDER", "openai"),
             agent_model=os.getenv("AGENT_MODEL", "gpt-4o"),
@@ -44,7 +60,7 @@ class AgentConfig:
                     str(PROJECT_ROOT.parent / "pubmed-clinical-mcp"),
                 )
             ),
-            pubmed_mcp_python=os.getenv("PUBMED_MCP_PYTHON", sys.executable),
+            pubmed_mcp_python=os.getenv("PUBMED_MCP_PYTHON") or sys.executable,
             pubmed_mcp_timeout_seconds=int(os.getenv("PUBMED_MCP_TIMEOUT_SECONDS", "45")),
             pubmed_mcp_max_results=int(os.getenv("PUBMED_MCP_MAX_RESULTS", "8")),
             chroma_db_path=Path(os.getenv("CHROMA_DB_PATH", str(PROJECT_ROOT / "chroma_db"))),
