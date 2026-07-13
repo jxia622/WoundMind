@@ -339,13 +339,10 @@ function renderCondition(condition) {
 }
 
 function renderReview() {
-  const maskUrl = previewDataUrl(state.mask?.mask_overlay_preview);
+  const maskUrl = previewDataUrl(state.mask?.mask_preview || state.mask?.mask_overlay_preview);
   const depthUrl = previewDataUrl(state.depth?.depth_preview);
-  document.querySelector("#analysis-original-image").src = state.originalUrl;
   document.querySelector("#analysis-mask-image").src = maskUrl || "";
   document.querySelector("#analysis-depth-image").src = depthUrl || "";
-  document.querySelector("#hold-mask-overlay").disabled = !maskUrl;
-  document.querySelector("#hold-depth-map").disabled = !depthUrl;
   document.querySelector("#mask-area").textContent = maskAreaText(state.mask);
   showSection("#review-card", true);
 }
@@ -621,63 +618,6 @@ async function continueToEvaluation() {
   }
 }
 
-function configureHoldPreview({
-  buttonSelector,
-  activeClass,
-  textSelector,
-  idleText,
-  activeText,
-  clearClasses,
-}) {
-  const button = document.querySelector(buttonSelector);
-  const preview = document.querySelector("#analysis-preview");
-  const text = document.querySelector(textSelector);
-  let activePointerId = null;
-
-  function setActive(isActive) {
-    if (button.disabled) return;
-    if (isActive) clearClasses.forEach((className) => preview.classList.remove(className));
-    preview.classList.toggle(activeClass, isActive);
-    button.setAttribute("aria-pressed", String(isActive));
-    text.textContent = isActive ? activeText : idleText;
-  }
-
-  button.addEventListener("pointerdown", (event) => {
-    event.preventDefault();
-    activePointerId = event.pointerId;
-    setActive(true);
-    try {
-      button.setPointerCapture?.(event.pointerId);
-    } catch {
-      // Pointer capture is best-effort for synthetic and older touch events.
-    }
-  });
-
-  function release(event) {
-    if (activePointerId !== null && event.pointerId !== activePointerId) return;
-    activePointerId = null;
-    setActive(false);
-  }
-
-  button.addEventListener("pointerup", release);
-  button.addEventListener("pointercancel", release);
-  button.addEventListener("lostpointercapture", () => {
-    activePointerId = null;
-    setActive(false);
-  });
-  button.addEventListener("keydown", (event) => {
-    if (![" ", "Enter"].includes(event.key)) return;
-    event.preventDefault();
-    setActive(true);
-  });
-  button.addEventListener("keyup", (event) => {
-    if (![" ", "Enter"].includes(event.key)) return;
-    event.preventDefault();
-    setActive(false);
-  });
-  button.addEventListener("blur", () => setActive(false));
-}
-
 async function checkApi() {
   try {
     const response = await fetch(`${API_BASE}/health`);
@@ -724,20 +664,4 @@ conditionOptions.forEach((condition) => {
   conditionSelect.append(option);
 });
 
-configureHoldPreview({
-  buttonSelector: "#hold-mask-overlay",
-  activeClass: "is-showing-mask",
-  textSelector: "#mask-preview-button-text",
-  idleText: "Hold for segmentation",
-  activeText: "Segmentation overlay",
-  clearClasses: ["is-showing-depth"],
-});
-configureHoldPreview({
-  buttonSelector: "#hold-depth-map",
-  activeClass: "is-showing-depth",
-  textSelector: "#depth-preview-button-text",
-  idleText: "Hold for depth map",
-  activeText: "Depth map",
-  clearClasses: ["is-showing-mask"],
-});
 checkApi();
