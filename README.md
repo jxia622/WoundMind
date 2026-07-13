@@ -59,34 +59,29 @@ The core agent path is deterministic and auditable: WoundMind classifies the con
 
 ```mermaid
 flowchart LR
-    A["Draft assessment<br/>condition + severity + rationale"]:::draft
-    B["Policy-filtered<br/>clinical evidence retrieval"]:::retrieve
-    C["Evidence packet<br/>source + section + text chunks"]:::evidence
-    D{"Verifier mode"}:::decision
-    E["OpenAI staging audit<br/>JSON: PASS / FAIL / UNCERTAIN"]:::llm
-    F["Deterministic fallback<br/>stage-term matching"]:::local
-    G["Verifier result<br/>citation + flags"]:::result
-    H["Final report or<br/>clinician escalation"]:::output
+    A["Model proposes<br/>condition + stage"]:::claim
+    B["Agent gathers<br/>clinical evidence"]:::evidence
+    C["Verifier compares<br/>claim vs evidence"]:::compare
+    D{"Is the claim<br/>supported?"}:::decision
+    E["Supported<br/>include citation"]:::pass
+    F["Unclear or unsupported<br/>flag for review"]:::warn
+    G["Final report<br/>or escalation"]:::output
 
     A --> B --> C --> D
-    D -->|OpenAI key configured| E
-    D -->|No key / local mode| F
-    E --> G
-    F --> G
-    G --> H
+    D -->|Yes| E --> G
+    D -->|No / unsure| F --> G
 
-    classDef draft fill:#eef2ff,stroke:#6366f1,stroke-width:2px,color:#0f172a;
-    classDef retrieve fill:#ecfeff,stroke:#0891b2,stroke-width:2px,color:#0f172a;
-    classDef evidence fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#0f172a;
-    classDef decision fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#0f172a;
-    classDef llm fill:#fdf2f8,stroke:#db2777,stroke-width:2px,color:#0f172a;
-    classDef local fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a;
-    classDef result fill:#fff1f2,stroke:#e11d48,stroke-width:2px,color:#0f172a;
-    classDef output fill:#f3f4f6,stroke:#475569,stroke-width:2px,color:#0f172a;
-    linkStyle 0,1,2,3,4,5,6,7 stroke:#94a3b8,stroke-width:2px;
+    classDef claim fill:#eaf4ff,stroke:#378add,stroke-width:2px,color:#0f172a;
+    classDef evidence fill:#eefdf8,stroke:#21a67a,stroke-width:2px,color:#0f172a;
+    classDef compare fill:#fff7e6,stroke:#f2a93b,stroke-width:2px,color:#0f172a;
+    classDef decision fill:#f4f0ff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a;
+    classDef pass fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#0f172a;
+    classDef warn fill:#fff0f3,stroke:#e85d75,stroke-width:2px,color:#0f172a;
+    classDef output fill:#f3f4f6,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    linkStyle 0,1,2,3,4,5 stroke:#94a3b8,stroke-width:2px;
 ```
 
-The verifier is scoped to audit support for the drafted stage, not to make an independent diagnosis. It returns `PASS`, `FAIL`, or `UNCERTAIN` with a short citation or flag; uncertain results suppress the staging recommendation and route the case toward clinician review.
+The verification agent does not make a new diagnosis. It checks whether the model's proposed condition and stage are supported by retrieved clinical evidence; supported claims get cited in the report, while unclear or unsupported claims are flagged for clinician review.
 
 ## Repository Layout
 
