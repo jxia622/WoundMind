@@ -7,3 +7,5 @@ __pycache__/
 test_*.py
 verify_*.py
 check_*.py
+tests/
+scripts/dev/

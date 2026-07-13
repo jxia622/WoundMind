@@ -1,84 +1,140 @@
 # WoundMind
 
-WoundMind is a research prototype for a wound diagnostic assistant agent. It combines a multi-stage image analysis pipeline with human-in-the-loop review and clinical reference retrieval so wound assessment can be more traceable than a single black-box prediction.
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](#local-setup)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](#run-locally)
+[![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](#run-locally)
+[![Status](https://img.shields.io/badge/status-research%20prototype-orange)](#safety-note)
 
-> Research prototype. Not for clinical diagnosis.
+WoundMind is a diagnostic assistant agent for wound assessment research. It combines image-model tools, human-in-the-loop review, clinical policy routing, and reference retrieval into a traceable workflow for diabetic foot ulcers, pressure injuries, and related skin/wound conditions.
 
-## What is implemented
+## Safety Note
 
-- FastAPI backend for image validation, condition prediction, mask generation, depth estimation, severity routing, agent analysis, and feedback logging.
-- Streamlit workflow for interactive local use.
-- Static browser UI prototype in `frontend/static-demo/`.
-- ConvNeXt-Tiny condition classifier for 18 skin and wound conditions.
-- U-Net++ wound segmentation wrapper for mask generation.
-- Depth Anything V2 wrapper for relative depth estimation.
-- DFU and pressure injury severity routing across RGB, RGB+mask, RGB+depth, and RGB+depth+mask model variants.
-- Agent modules for tool orchestration, policy lookup, clinician-question simulation, verifier state, case logging, and clinical document retrieval.
-- Local clinical reference index in `chroma_db/wound_clinical_docs.json`.
+WoundMind is a research prototype. It is not a medical device and is not for clinical diagnosis.
 
-## Repository layout
+## What It Does
+
+| Capability | Current implementation |
+| --- | --- |
+| Condition triage | ConvNeXt-Tiny classifier over 18 wound/skin condition classes |
+| Wound localization | U-Net++ segmentation wrapper with mask preview and mask-area summary |
+| Depth signal | Depth Anything V2 relative-depth wrapper with ROI-aware previews |
+| Severity routing | DFU and pressure-injury severity model selection across RGB, mask, depth, and combined inputs |
+| Agent orchestration | Tool planner, policy registry, verifier state, case logger, simulated clinician Q&A |
+| Clinical grounding | Local clinical reference index plus condition-gated retrieval policy |
+| Human review | Streamlit workflow and static browser prototype for accepting or overriding model outputs |
+
+## Agent Workflow
+
+```mermaid
+flowchart LR
+    A["Upload wound image"] --> B["Validate image quality"]
+    B --> C["Classify condition"]
+    C --> D["Load condition policy"]
+    D --> E["Run tool plan"]
+    E --> F["Segment wound"]
+    E --> G["Estimate depth"]
+    F --> H["Route severity model"]
+    G --> H
+    H --> I["Retrieve clinical references"]
+    I --> J["Verify and summarize assessment"]
+    J --> K["Log case artifacts and feedback"]
+```
+
+The agent can run deterministically without an LLM key. OpenAI-backed brain/verifier paths are configured behind the same interface for later expansion.
+
+## Repository Layout
 
 ```text
-app/                    FastAPI app, pipeline, models, routing, agent modules
-frontend/static-demo/   Static browser prototype for the local demo
-scripts/                Clinical document ingestion utilities
-chroma_db/              Local JSON clinical reference index
-clinical_docs/          Source manifests and text references; PDFs stay local
-docs/                   Project notes and checkpoint placement instructions
-tests                   Root-level smoke and preprocessing tests
+app/
+  main.py                  FastAPI service entrypoint
+  pipeline.py              Multi-stage wound analysis pipeline
+  models/                  Condition, segmentation, depth, severity wrappers
+  agent/                   Tool planner, memory, verifier, policy, case logging
+  routing/                 DFU/PI severity model routing rules
+  preprocessing/           Image loading, transforms, validation
+
+frontend/
+  streamlit_app.py         Human-in-the-loop workflow UI
+  static-demo/             Browser prototype for API-driven demo flow
+
+scripts/
+  ingest_docs.py           Clinical reference ingestion
+  dev/                     Local demo and maintenance scripts
+
+chroma_db/                 JSON fallback clinical reference index
+clinical_docs/             Text references and source manifest; PDFs stay local
+docs/                      Architecture, checkpoint, and development notes
+tests/                     Smoke and preprocessing tests
 ```
 
-## Model checkpoints
-
-Large model checkpoints are not committed to git. Put them under `checkpoints/` using the paths listed in [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md).
-
-## Local setup
+## Local Setup
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install -r requirements_agent.txt
+git clone https://github.com/jxia622/WoundMind.git
+cd WoundMind
+make setup
+cp .env.example .env
 ```
 
-Depth Anything V2 is loaded from Hugging Face with the model id `depth-anything/Depth-Anything-V2-Base-hf`. It is not stored in this repo.
+Large model weights are not committed to git. Place them under `checkpoints/` using the paths in [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md).
 
-## Run
+## Run Locally
 
-Start the API and static prototype:
+Run the API and static browser prototype:
 
 ```bash
-./start_demo.sh
+make start-demo
 ```
 
-Then open:
+Open:
 
-- API: http://localhost:8000
+- API health: http://localhost:8000/health
 - Swagger: http://localhost:8000/docs
 - Static demo: http://localhost:4173
 
-For the Streamlit workflow:
+Run the Streamlit workflow:
 
 ```bash
-source .venv/bin/activate
-streamlit run streamlit_app.py
+make streamlit
 ```
 
-## Validation
+Useful development commands:
 
 ```bash
-python -m compileall app
-python -m pytest test_preprocessing.py
+make api
+make status-demo
+make stop-demo
+make validate
 ```
 
-The full inference tests require local checkpoints.
+## API Surface
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /validate-image` | Basic image quality and format checks |
+| `POST /predict-condition` | Top-k condition prediction |
+| `POST /generate-mask` | U-Net++ wound mask generation |
+| `POST /generate-depth` | Depth Anything V2 depth preview generation |
+| `POST /predict-severity` | DFU/PI severity routing and inference |
+| `POST /analyze` | Default end-to-end pipeline |
+| `POST /agent/analyze` | Agent-mediated analysis with policy and retrieval context |
+| `POST /feedback` | JSONL feedback logging |
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Checkpoint placement](docs/CHECKPOINTS.md)
+- [Development guide](docs/DEVELOPMENT.md)
+
+## Design References
+
+The README structure follows common patterns used by mature agent repos: a compact product definition, capability table, quickstart, architecture diagram, API surface, and roadmap. The goal is to make the repo understandable before a reader opens the code.
 
 ## Not Yet Built
 
-- Full clinical validation against an independently reviewed wound dataset.
-- Production-grade deployment, authentication, access control, audit logging, and PHI-safe storage.
-- Fully automated clinician-facing follow-up question flow beyond the current simulated/context-driven Q&A helper.
-- A polished production UI that unifies the Streamlit workflow and static prototype.
-- Remote model artifact hosting and reproducible checkpoint download scripts.
+- Independent clinical validation with reviewed wound datasets and clinician-labeled outcomes.
+- Production-grade authentication, authorization, PHI-safe storage, audit logging, and monitoring.
+- Remote checkpoint hosting plus reproducible model-artifact download scripts.
+- Fully automated clinician follow-up flow beyond the current simulated/context-driven Q&A helper.
+- Unified production UI that replaces the split Streamlit and static demo surfaces.
 - Prospective safety evaluation, calibration review, and clinician sign-off workflow.

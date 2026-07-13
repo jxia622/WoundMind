@@ -1,6 +1,7 @@
 #!/bin/zsh
 
-PROJECT_DIR="${0:A:h}"
+SCRIPT_DIR="${0:A:h}"
+PROJECT_DIR="${SCRIPT_DIR:h:h}"
 RUNTIME_DIR="$PROJECT_DIR/.demo-runtime"
 
 for service in backend frontend; do

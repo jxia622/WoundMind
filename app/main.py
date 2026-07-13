@@ -86,7 +86,7 @@ def startup_event():
 @app.get("/")
 def root():
     return {
-        "message": "Wound Analysis Pipeline API is running.",
+        "message": "WoundMind diagnostic assistant API is running.",
         "model_version": MODEL_VERSION,
         "disclaimer": DISCLAIMER,
     }

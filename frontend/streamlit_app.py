@@ -11,9 +11,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 MASK_CANVAS = components.declare_component(
     "mask_canvas",
-    path=str(Path(__file__).resolve().parent / "app" / "frontend" / "mask_canvas"),
+    path=str(PROJECT_ROOT / "app" / "frontend" / "mask_canvas"),
 )
 
 
@@ -41,7 +43,7 @@ SUPPORTED_CONDITIONS = [
 
 
 st.set_page_config(
-    page_title="Wound Analysis Pipeline",
+    page_title="WoundMind",
     page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -219,8 +221,8 @@ def show_json(label: str, payload: dict | None) -> None:
 def render_header() -> None:
     left, right = st.columns([0.72, 0.28], vertical_alignment="center")
     with left:
-        st.title("Wound Analysis Pipeline")
-        st.caption("Human-in-the-loop condition classification, mask review, depth review, and severity routing.")
+        st.title("WoundMind")
+        st.caption("Human-in-the-loop diagnostic assistant for wound image assessment.")
     with right:
         st.session_state["api_url"] = st.text_input(
             "FastAPI server",
@@ -539,7 +541,7 @@ def render_sidebar() -> None:
         st.header("Run locally")
         st.code(
             'uvicorn app.main:app --host 0.0.0.0 --port 8000\n'
-            'streamlit run streamlit_app.py',
+            'streamlit run frontend/streamlit_app.py',
             language="bash",
         )
         st.divider()

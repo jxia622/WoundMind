@@ -2,7 +2,8 @@
 
 set -eu
 
-PROJECT_DIR="${0:A:h}"
+SCRIPT_DIR="${0:A:h}"
+PROJECT_DIR="${SCRIPT_DIR:h:h}"
 RUNTIME_DIR="$PROJECT_DIR/.demo-runtime"
 LOG_DIR="$RUNTIME_DIR/logs"
 PYTHON_BIN="${PYTHON_BIN:-$PROJECT_DIR/.venv/bin/python}"
@@ -13,9 +14,12 @@ fi
 
 mkdir -p "$LOG_DIR"
 
-"$PYTHON_BIN" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 \
-  > "$LOG_DIR/backend.log" 2> "$LOG_DIR/backend-error.log" &
-echo $! > "$RUNTIME_DIR/backend.pid"
+(
+  cd "$PROJECT_DIR"
+  "$PYTHON_BIN" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 \
+    > "$LOG_DIR/backend.log" 2> "$LOG_DIR/backend-error.log" &
+  echo $! > "$RUNTIME_DIR/backend.pid"
+)
 
 (
   cd "$PROJECT_DIR/frontend/static-demo"
