@@ -50,6 +50,7 @@ class WoundMindAgent:
         image: Image.Image,
         patient_context: dict | None = None,
         case_id: str | None = None,
+        condition_override: str | None = None,
     ) -> AgentAnalyzeResponse:
         state = AgentState(
             case_id=case_id or str(uuid4()),
@@ -72,6 +73,16 @@ class WoundMindAgent:
                 "top3": state.classification_result.get("top3"),
             },
         )
+
+        if condition_override and condition_override != condition:
+            state.add_trace(
+                "override_condition",
+                {"model_top1": condition},
+                {"selected_condition": condition_override},
+            )
+            state.classification_result["model_top1_label"] = condition
+            state.classification_result["top1_label"] = condition_override
+            condition = condition_override
 
         state.condition_policy = get_condition_policy(condition, self.policy_registry)
         state.tool_plan = build_tool_plan(state.condition_policy, self.policy_registry)

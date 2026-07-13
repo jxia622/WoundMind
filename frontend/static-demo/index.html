@@ -18,7 +18,7 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"
     />
-    <link rel="stylesheet" href="styles.css?v=20260713-1" />
+    <link rel="stylesheet" href="styles.css?v=20260713-2" />
   </head>
   <body>
     <main class="prototype-shell" id="app">
@@ -81,41 +81,17 @@
             <ol class="workflow-timeline" id="workflow-timeline"></ol>
           </article>
 
-          <article class="card quality-card" id="quality-card" hidden>
-            <p class="section-label">Image verification</p>
-            <div class="status-grid">
-              <div>
-                <span class="status-kicker">Quality status</span>
-                <strong id="quality-status">Pending</strong>
-              </div>
-              <div>
-                <span class="status-kicker">Blur score</span>
-                <strong id="blur-score">-</strong>
-              </div>
-            </div>
+          <article class="card condition-card" id="condition-card" hidden>
+            <p class="section-label">Condition classification</p>
+            <label class="condition-select-label" for="condition-select">
+              <span>Selected condition</span>
+              <select id="condition-select"></select>
+            </label>
+            <p class="condition-confidence" id="condition-confidence"></p>
             <aside class="notice notice-warning" id="validation-warning" role="status" hidden>
               <i class="ti ti-alert-triangle" aria-hidden="true"></i>
               <span id="validation-warning-text"></span>
             </aside>
-          </article>
-
-          <article class="card condition-card" id="condition-card" hidden>
-            <p class="section-label">Condition classification</p>
-            <div class="condition-summary">
-              <div>
-                <strong class="condition-name-large" id="condition-name">
-                  Awaiting classification
-                </strong>
-                <p class="condition-confidence" id="condition-confidence"></p>
-              </div>
-              <div class="image-placeholder wound-photo result-image-frame">
-                <img id="result-image" alt="Uploaded wound" />
-                <span class="image-label">
-                  <i class="ti ti-photo" aria-hidden="true"></i>
-                  Uploaded image
-                </span>
-              </div>
-            </div>
             <p class="section-label section-label-spaced">Top probable conditions</p>
             <div class="probability-list" id="condition-probabilities"></div>
             <aside class="notice notice-info" id="condition-stop" hidden>
@@ -268,6 +244,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260713-1"></script>
+    <script src="app.js?v=20260713-2"></script>
   </body>
 </html>

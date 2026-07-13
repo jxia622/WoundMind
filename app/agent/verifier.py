@@ -68,13 +68,28 @@ class AssessmentVerifier:
         )
         text = response.output_text
         try:
-            payload = json.loads(text)
+            payload = self._parse_json_object(text)
         except json.JSONDecodeError:
             return VerifierResult(
                 result="UNCERTAIN",
                 flag="Verifier returned non-JSON output.",
             )
         return VerifierResult(**payload)
+
+    @staticmethod
+    def _parse_json_object(text: str) -> dict:
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r"\s*```$", "", cleaned)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            if start >= 0 and end > start:
+                return json.loads(cleaned[start : end + 1])
+            raise
 
     def _verify_deterministic(self, draft: dict, doc_chunks: list[DocumentChunk]) -> VerifierResult:
         stage = draft.get("severity_stage")

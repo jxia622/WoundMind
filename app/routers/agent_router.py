@@ -50,6 +50,7 @@ async def analyze_agent(
     image: UploadFile = File(...),
     patient_context: str | None = Form(None),
     case_id: str | None = Form(None),
+    selected_condition: str | None = Form(None),
 ):
     _validate_upload_content_type(image)
     try:
@@ -68,6 +69,7 @@ async def analyze_agent(
                 image=image_rgb,
                 patient_context=context,
                 case_id=case_id,
+                condition_override=selected_condition,
             ),
             timeout=config.timeout_seconds,
         )

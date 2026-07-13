@@ -13,6 +13,7 @@ const state = {
   originalUrl: null,
   validation: null,
   condition: null,
+  selectedCondition: null,
   mask: null,
   depth: null,
   severity: null,
@@ -56,6 +57,27 @@ const pressureInjuryStageLabels = {
 
 const dfuGradeOrder = ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"];
 
+const conditionOptions = [
+  "Healthy_Normal_Skin",
+  "Pressure_Injury_(PI)",
+  "Diabetic_Foot_Ulcers_(DFU)",
+  "Venous_Leg_Ulcers_(VLU)",
+  "Atopic_Dermatitis_(Eczema)",
+  "Contact_Dermatitis",
+  "Seborrheic_Dermatitis",
+  "Acne",
+  "Hidradenitis_Suppurativa_(HS)",
+  "Sunburn",
+  "Psoriasis",
+  "Bruising-Contusions",
+  "Melasma",
+  "Cold_Injury",
+  "Rosacea",
+  "Surgical_Wounds",
+  "Radiation_Injury",
+  "Burn_Wounds",
+];
+
 const workflowSteps = {
   verify: "Verify image quality",
   classify: "Classify wound condition",
@@ -76,6 +98,7 @@ const evaluationTraceMessages = [
 const fileInput = document.querySelector("#image-upload");
 const analyzeButton = document.querySelector("#analyze-image");
 const continueEvaluationButton = document.querySelector("#continue-evaluation");
+const conditionSelect = document.querySelector("#condition-select");
 
 function setApiStatus(status, label) {
   const statusElement = document.querySelector("#api-status");
@@ -150,6 +173,10 @@ function isSupportedSeverityCondition(condition = "") {
     normalized.includes("pressure_injury") ||
     normalized.includes("pressure injury")
   );
+}
+
+function selectedCondition() {
+  return state.selectedCondition || state.condition?.top1_label || "";
 }
 
 function previewDataUrl(preview) {
@@ -257,6 +284,7 @@ async function postImage(endpoint, fieldName = "file", extraData = {}) {
 function resetWorkflowOutput() {
   state.validation = null;
   state.condition = null;
+  state.selectedCondition = null;
   state.mask = null;
   state.depth = null;
   state.severity = null;
@@ -266,7 +294,6 @@ function resetWorkflowOutput() {
 
   [
     "#trace-card",
-    "#quality-card",
     "#condition-card",
     "#review-card",
     "#evaluation-card",
@@ -282,31 +309,29 @@ function resetWorkflowOutput() {
 }
 
 function renderValidation(validation) {
-  showSection("#quality-card", true);
-  document.querySelector("#quality-status").textContent = validation.passed
-    ? "Passed"
-    : "Needs review";
-  document.querySelector("#blur-score").textContent =
-    validation.blur_score == null ? "-" : Number(validation.blur_score).toFixed(1);
   const warnings = validation.warnings || [];
   document.querySelector("#validation-warning-text").textContent = warnings.join(" ");
   showSection("#validation-warning", warnings.length > 0);
 }
 
 function renderCondition(condition) {
-  const conditionLabel = prettyCondition(condition.top1_label || "Unknown condition");
+  state.selectedCondition = state.selectedCondition || condition.top1_label;
+  const selected = selectedCondition();
+  const modelCondition = condition.top1_label;
   showSection("#condition-card", true);
-  document.querySelector("#condition-name").textContent = conditionLabel;
-  document.querySelector("#condition-confidence").textContent =
-    `Confidence ${formatPercent(condition.confidence)} - ${condition.confidence_level || confidenceLevel(condition.confidence)}`;
-  document.querySelector("#result-image").src = state.originalUrl;
+  conditionSelect.value = selected;
+  const overrideText =
+    selected === modelCondition
+      ? `Model prediction confidence ${formatPercent(condition.confidence)} - ${condition.confidence_level || confidenceLevel(condition.confidence)}`
+      : `User override from ${prettyCondition(modelCondition)} (${formatPercent(condition.confidence)} model confidence)`;
+  document.querySelector("#condition-confidence").textContent = overrideText;
   renderProbabilityList(
     document.querySelector("#condition-probabilities"),
     (condition.top3 || []).map((item) => ({
       label: prettyCondition(item.class_name),
       probability: item.probability,
     })),
-    conditionLabel,
+    prettyCondition(modelCondition),
     { highlightFirst: true },
   );
 }
@@ -389,7 +414,7 @@ function renderAgentTrace(trace = []) {
 
 function briefReport(output, severity) {
   const stage = output.severity_stage || severity?.severity_prediction || "No verified stage";
-  const condition = prettyCondition(output.condition || state.condition?.top1_label || "condition");
+  const condition = prettyCondition(output.condition || selectedCondition() || "condition");
   const confidence = output.severity_confidence ?? severity?.severity_confidence;
   const verifier = output.verifier_result || "UNCERTAIN";
   const modelVariant = output.model_variant_used || severity?.model_used;
@@ -400,7 +425,7 @@ function briefReport(output, severity) {
 function renderFinalResult(agentPayload) {
   const output = agentPayload.output || {};
   const severity = state.severity || {};
-  const conditionLabel = prettyCondition(output.condition || state.condition?.top1_label || "Condition");
+  const conditionLabel = prettyCondition(output.condition || selectedCondition() || "Condition");
   const stage = output.severity_stage || severity.severity_prediction || "Not verified";
   const displayedStage = /pressure injury/i.test(conditionLabel)
     ? pressureInjuryStageLabels[stage] || stage
@@ -447,6 +472,7 @@ async function runInitialAnalysis() {
     setActiveTrace("Classifying wound condition...");
     addTimelineStep("classify", workflowSteps.classify, "running", "Running condition classifier");
     state.condition = await postImage("/predict-condition");
+    state.selectedCondition = state.condition.top1_label;
     renderCondition(state.condition);
     addTimelineStep(
       "classify",
@@ -455,16 +481,38 @@ async function runInitialAnalysis() {
       `${prettyCondition(state.condition.top1_label)} - ${formatPercent(state.condition.confidence)}`,
     );
 
-    setActiveTrace("Checking whether downstream severity workflow is available...");
-    addTimelineStep("route", workflowSteps.route, "running", "DFU and pressure injury are currently supported");
-    if (!isSupportedSeverityCondition(state.condition.top1_label)) {
-      addTimelineStep("route", workflowSteps.route, "warning", "Workflow stops after classification");
-      showSection("#condition-stop", true);
-      setActiveTrace("Classification complete. Severity workflow is not built for this condition yet.", false);
-      return;
-    }
-    addTimelineStep("route", workflowSteps.route, "done", "Severity workflow available");
+    await runDownstreamForSelectedCondition();
+    setApiStatus("online", "API connected");
+  } catch (error) {
+    showError(error.message || "Analysis failed.");
+    setApiStatus("offline", "API unavailable");
+    setActiveTrace("Workflow stopped because a request failed.", false);
+  } finally {
+    setBusy(false);
+  }
+}
 
+async function runDownstreamForSelectedCondition() {
+  const condition = selectedCondition();
+  showSection("#review-card", false);
+  showSection("#evaluation-card", false);
+  showSection("#final-result", false);
+  showSection("#condition-stop", false);
+  ["route", "segment", "depth"].forEach((id) => {
+    document.querySelector(`#workflow-timeline [data-step="${id}"]`)?.remove();
+  });
+
+  setActiveTrace("Checking whether downstream severity workflow is available...");
+  addTimelineStep("route", workflowSteps.route, "running", "DFU and pressure injury are currently supported");
+  if (!isSupportedSeverityCondition(condition)) {
+    addTimelineStep("route", workflowSteps.route, "warning", "Workflow stops after classification");
+    showSection("#condition-stop", true);
+    setActiveTrace("Classification complete. Severity workflow is not built for this condition yet.", false);
+    return;
+  }
+  addTimelineStep("route", workflowSteps.route, "done", "Severity workflow available");
+
+  if (!state.mask) {
     setActiveTrace("Generating wound segmentation...");
     addTimelineStep("segment", workflowSteps.segment, "running", "Running U-Net++ mask model");
     state.mask = await postImage("/generate-mask", "file", { case_id: state.condition.case_id });
@@ -474,7 +522,11 @@ async function runInitialAnalysis() {
       state.mask.mask_available ? "done" : "warning",
       state.mask.mask_available ? "Mask overlay ready" : "Mask unavailable",
     );
+  } else {
+    addTimelineStep("segment", workflowSteps.segment, "done", "Existing mask overlay ready");
+  }
 
+  if (!state.depth) {
     setActiveTrace("Estimating relative depth map...");
     addTimelineStep("depth", workflowSteps.depth, "running", "Running Depth Anything V2");
     state.depth = await postImage("/generate-depth", "file", { case_id: state.condition.case_id });
@@ -484,24 +536,19 @@ async function runInitialAnalysis() {
       state.depth.depth_available ? "done" : "warning",
       state.depth.depth_available ? "Depth preview ready" : "Depth unavailable",
     );
-
-    state.severity = await postImage("/predict-severity", "file", {
-      selected_condition: state.condition.top1_label,
-      condition_source: "model_accepted",
-      mask_status: state.mask.mask_available ? "accepted" : "none",
-      depth_status: state.depth.depth_available ? "accepted" : "rejected",
-    });
-
-    renderReview();
-    setActiveTrace("Visual review ready. Continue to evaluation when ready.", false);
-    setApiStatus("online", "API connected");
-  } catch (error) {
-    showError(error.message || "Analysis failed.");
-    setApiStatus("offline", "API unavailable");
-    setActiveTrace("Workflow stopped because a request failed.", false);
-  } finally {
-    setBusy(false);
+  } else {
+    addTimelineStep("depth", workflowSteps.depth, "done", "Existing depth preview ready");
   }
+
+  state.severity = await postImage("/predict-severity", "file", {
+    selected_condition: condition,
+    condition_source: condition === state.condition.top1_label ? "model_accepted" : "user_override",
+    mask_status: state.mask.mask_available ? "accepted" : "none",
+    depth_status: state.depth.depth_available ? "accepted" : "rejected",
+  });
+
+  renderReview();
+  setActiveTrace("Visual review ready. Continue to evaluation when ready.", false);
 }
 
 function startEvaluationTrace() {
@@ -525,6 +572,7 @@ async function continueToEvaluation() {
   try {
     state.agent = await postImage("/agent/analyze", "image", {
       case_id: state.condition?.case_id || "",
+      selected_condition: selectedCondition(),
     });
     window.clearInterval(state.evaluationTimer);
     state.evaluationTimer = null;
@@ -625,6 +673,26 @@ fileInput.addEventListener("change", () => {
 
 analyzeButton.addEventListener("click", runInitialAnalysis);
 continueEvaluationButton.addEventListener("click", continueToEvaluation);
+conditionSelect.addEventListener("change", async () => {
+  if (!state.condition || state.busy || state.evaluating) return;
+  state.selectedCondition = conditionSelect.value;
+  renderCondition(state.condition);
+  try {
+    setBusy(true);
+    await runDownstreamForSelectedCondition();
+  } catch (error) {
+    showError(error.message || "Condition override failed.");
+  } finally {
+    setBusy(false);
+  }
+});
+
+conditionOptions.forEach((condition) => {
+  const option = document.createElement("option");
+  option.value = condition;
+  option.textContent = prettyCondition(condition);
+  conditionSelect.append(option);
+});
 
 configureHoldPreview({
   buttonSelector: "#hold-mask-overlay",

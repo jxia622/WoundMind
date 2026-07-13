@@ -450,6 +450,28 @@ button:active {
   line-height: 1.08;
 }
 
+.condition-select-label {
+  display: grid;
+  gap: 7px;
+}
+
+.condition-select-label span {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.condition-select-label select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  color: var(--brand-blue);
+  background: var(--color-background-primary);
+  font-size: 22px;
+  font-weight: 500;
+}
+
 .condition-confidence {
   margin: 9px 0 0;
   color: var(--color-text-secondary);
