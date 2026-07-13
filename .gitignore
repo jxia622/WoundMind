@@ -15,6 +15,7 @@ venv-hw/
 !.env.example
 
 .demo-runtime/
+demo_artifacts/
 case_artifacts/
 feedback.jsonl
 *.log

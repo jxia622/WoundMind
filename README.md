@@ -7,6 +7,12 @@
 
 WoundMind is a diagnostic assistant agent for wound assessment research. It combines image-model tools, human-in-the-loop review, clinical policy routing, and reference retrieval into a traceable workflow for diabetic foot ulcers, pressure injuries, and related skin/wound conditions.
 
+## Demo
+
+[Watch the WoundMind DFU Grade 3 demo](docs/assets/woundmind_dfu_grade3_demo.webm)
+
+The demo uses a diabetic foot ulcer image and shows the local UI returning a DFU condition prediction, Grade 3 severity result, confidence/probability summaries, and the segmentation/depth review screen.
+
 ## Safety Note
 
 WoundMind is a research prototype. It is not a medical device and is not for clinical diagnosis.
