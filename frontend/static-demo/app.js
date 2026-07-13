@@ -87,12 +87,14 @@ const workflowSteps = {
 };
 
 const evaluationTraceMessages = [
-  "Loading condition-specific evidence policy...",
-  "Retrieving clinical reference chunks...",
-  "Running segmentation and depth tools through the agent...",
-  "Routing severity model variant...",
-  "Checking staging against wound evidence verifier...",
-  "Preparing brief report...",
+  "Starting full diagnostic agent...",
+  "Loading condition-specific tool policy...",
+  "Retrieving clinical evidence chunks...",
+  "Running segmentation and depth tools inside the agent...",
+  "Routing the severity model variant...",
+  "Simulating clinician QA checks...",
+  "Checking the draft with the wound evidence verifier...",
+  "Preparing the final agent report...",
 ];
 
 const fileInput = document.querySelector("#image-upload");
@@ -372,8 +374,23 @@ function renderSeverityProbabilities(severity, conditionLabel) {
 
 function traceOutputLine(step) {
   const output = step.outputs_summary || {};
+  const input = step.inputs_summary || {};
+  if (step.tool === "validate_image") {
+    return output.passed ? "Image quality accepted" : "Quality warnings recorded";
+  }
   if (step.tool === "classify_condition") {
     return `${prettyCondition(output.top1_label)} (${formatPercent(output.confidence)})`;
+  }
+  if (step.tool === "override_condition") {
+    return `User selected ${prettyCondition(output.selected_condition)} over ${prettyCondition(input.model_top1)}`;
+  }
+  if (step.tool === "load_condition_policy") {
+    const tools = output.runnable_tools || [];
+    const toolCount = Array.isArray(tools) ? tools.length : 0;
+    return `${toolCount} implemented runtime tools selected`;
+  }
+  if (step.tool === "select_mask") {
+    return output.rationale || "Mask selected";
   }
   if (step.tool === "predict_severity") {
     return `${output.severity_prediction || "No severity"} via ${output.model_used || "route"}`;
@@ -389,6 +406,12 @@ function traceOutputLine(step) {
   }
   if (step.tool === "depth_map") {
     return output.depth_available ? "Depth map generated" : "Depth unavailable";
+  }
+  if (step.tool === "ask_clinician") {
+    return `${input.question || "Question"} ${output.answer ? `- ${output.answer}` : ""}`;
+  }
+  if (step.tool === "skip_tool") {
+    return output.reason || "Tool skipped by policy";
   }
   return Object.keys(output).length ? "Complete" : "";
 }
@@ -419,7 +442,8 @@ function briefReport(output, severity) {
   const verifier = output.verifier_result || "UNCERTAIN";
   const modelVariant = output.model_variant_used || severity?.model_used;
   const modelLine = modelVariant ? ` using ${modelVariant}` : "";
-  return `${condition} was routed through the implemented severity workflow${modelLine}. The model suggests ${stage} with ${formatPercent(confidence)} severity confidence, and the evidence verifier returned ${verifier}.`;
+  const qaCount = output.qa_exchanges?.length || 0;
+  return `${condition} was routed through the full agent workflow${modelLine}. The agent drafted ${stage} with ${formatPercent(confidence)} severity confidence, simulated ${qaCount} clinician QA checks, and the evidence verifier returned ${verifier}.`;
 }
 
 function renderFinalResult(agentPayload) {
@@ -439,9 +463,15 @@ function renderFinalResult(agentPayload) {
   renderSeverityProbabilities(severity, conditionLabel);
 
   document.querySelector("#brief-report").textContent = briefReport(output, severity);
+  document.querySelector("#agent-case-id").textContent = agentPayload.case_id || output.case_id || "-";
   document.querySelector("#verifier-result").textContent = output.verifier_result || "-";
   document.querySelector("#model-variant").textContent =
     output.model_variant_used || severity.model_used || "-";
+  document.querySelector("#agent-trace-count").textContent =
+    String(output.agent_trace?.length || 0);
+  document.querySelector("#agent-evidence-count").textContent =
+    String(agentPayload.retrieved_chunks?.length || 0);
+  document.querySelector("#agent-artifact-path").textContent = output.artifact_path || "-";
 
   document.querySelector("#verifier-citation-text").textContent = output.citation || "";
   showSection("#verifier-citation", Boolean(output.citation));
@@ -577,7 +607,7 @@ async function continueToEvaluation() {
     window.clearInterval(state.evaluationTimer);
     state.evaluationTimer = null;
     document.querySelector("#evaluation-trace-text").textContent =
-      "Evidence verifier complete.";
+      "Full agent run complete.";
     renderAgentTrace(state.agent.output?.agent_trace || []);
     renderFinalResult(state.agent);
     setApiStatus("online", "API connected");

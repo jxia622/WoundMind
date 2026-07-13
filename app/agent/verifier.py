@@ -74,6 +74,14 @@ class AssessmentVerifier:
                 result="UNCERTAIN",
                 flag="Verifier returned non-JSON output.",
             )
+        for key in ("citation", "flag"):
+            if isinstance(payload.get(key), str) and payload[key].strip().lower() in {
+                "",
+                "none",
+                "null",
+                "n/a",
+            }:
+                payload[key] = None
         return VerifierResult(**payload)
 
     @staticmethod

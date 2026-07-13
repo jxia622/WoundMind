@@ -751,6 +751,16 @@ button:active {
   font-size: 13px;
 }
 
+.meta-row dt {
+  flex: 0 0 auto;
+}
+
+.meta-row dd {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
 .meta-row:last-child {
   border-bottom: 0;
 }
