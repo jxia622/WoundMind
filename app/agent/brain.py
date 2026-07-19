@@ -6,6 +6,7 @@ from PIL import Image
 
 from app.agent.case_logger import CaseArtifactLogger
 from app.agent.config import AgentConfig
+from app.agent.evaluation import EvaluationAgentLoop
 from app.agent.memory import ClinicalMemory
 from app.agent.schemas import AgentAnalyzeResponse, ClinicalOutput, QAExchange
 from app.agent.state import AgentState
@@ -18,7 +19,6 @@ from app.agent.tool_policy import (
     summarize_tool_plan,
 )
 from app.agent.tools import AgentTools
-from app.agent.verifier import AssessmentVerifier
 from app.config import DISCLAIMER
 
 
@@ -43,7 +43,7 @@ class WoundMindAgent:
             ClinicalMemory(self.config) if self.config.literature_backend == "local" else None
         )
         self.tools = AgentTools(pipeline=pipeline, config=self.config, memory=self.memory)
-        self.verifier = AssessmentVerifier(self.config)
+        self.evaluation_loop = EvaluationAgentLoop(self.config)
         self.case_logger = CaseArtifactLogger(self.config)
         self.policy_registry = load_condition_policy_registry()
 
@@ -119,7 +119,7 @@ class WoundMindAgent:
             state.selected_mask_image = state.mask_image
             state.selected_mask = {
                 "selected_mask_idx": 0 if state.mask_image is not None else None,
-                "rationale": "Single U-Net++ mask available; VLM selector not invoked without OPENAI_API_KEY.",
+                "rationale": "Single U-Net++ mask available; selected for downstream depth and severity tools.",
             }
             state.add_trace("segment_wound", {"model": "U-Net++"}, state.mask_result)
             state.add_trace("select_mask", {"candidate_count": 1}, state.selected_mask)
@@ -171,6 +171,19 @@ class WoundMindAgent:
 
         await self._maybe_ask_questions(state)
         stage = self._stage_for_output(state)
+        state.visual_evidence = await self.tools.extract_visual_evidence(
+            image=image,
+            condition=condition,
+            stage=stage,
+            mask_summary=state.mask_result,
+            depth_summary=state.depth_result,
+        )
+        state.add_trace(
+            "extract_visual_evidence",
+            {"condition": condition, "stage": stage, "image": "uploaded"},
+            self._visual_evidence_summary(state.visual_evidence),
+        )
+
         draft = {
             "condition": condition,
             "condition_confidence": condition_confidence,
@@ -179,6 +192,7 @@ class WoundMindAgent:
             if state.severity_result
             else None,
             "rationale": self._draft_rationale(state),
+            "visual_evidence": state.visual_evidence,
         }
         state.draft_assessment = draft
 
@@ -198,8 +212,28 @@ class WoundMindAgent:
             {"chunks": [chunk.model_dump(exclude={"text"}) for chunk in state.doc_chunks]},
         )
 
-        state.verifier_result = self.verifier.verify(draft, state.doc_chunks)
-        state.add_trace("verify_assessment", {"draft": draft}, state.verifier_result.model_dump())
+        evaluation = await self.evaluation_loop.run(
+            base_draft=draft,
+            visual_evidence=state.visual_evidence or {},
+            doc_chunks=state.doc_chunks,
+            condition=condition,
+            retrieve_docs=self.tools.retrieve_docs,
+        )
+        state.draft_assessment = evaluation.draft
+        state.doc_chunks = evaluation.doc_chunks
+        state.verifier_result = evaluation.verifier_result
+        state.evaluation_summary = evaluation.summary
+        for step in evaluation.trace_steps:
+            state.add_trace(
+                step["tool"],
+                step.get("inputs_summary", {}),
+                step.get("outputs_summary", {}),
+            )
+        state.add_trace(
+            "verify_assessment",
+            {"draft": state.draft_assessment, "mode": "agent_evaluator_loop"},
+            state.verifier_result.model_dump(),
+        )
 
         output = self._final_output(state)
         artifact_path = self.case_logger.write_case(state, output)
@@ -287,6 +321,8 @@ class WoundMindAgent:
             verifier_result=verifier.result if verifier else "UNCERTAIN",
             citation=verifier.citation if verifier and verifier.result == "PASS" else None,
             flags=flags,
+            visual_evidence=state.visual_evidence or {},
+            evaluation_summary=state.evaluation_summary or {},
             qa_exchanges=state.qa_history,
             agent_trace=state.trace,
             model_variant_used=state.severity_result.get("model_used") if state.severity_result else None,
@@ -325,6 +361,23 @@ class WoundMindAgent:
             "warning",
         ]
         return {key: severity_result.get(key) for key in keys if key in severity_result}
+
+    @staticmethod
+    def _visual_evidence_summary(visual_evidence: dict | None) -> dict:
+        if not visual_evidence:
+            return {}
+        return {
+            "vlm_used": visual_evidence.get("vlm_used", False),
+            "source": visual_evidence.get("source"),
+            "model": visual_evidence.get("model"),
+            "wound_visible": visual_evidence.get("wound_visible"),
+            "image_quality": visual_evidence.get("image_quality"),
+            "findings": visual_evidence.get("findings", [])[:5],
+            "staging_relevant_observations": visual_evidence.get(
+                "staging_relevant_observations", []
+            )[:5],
+            "limitations": visual_evidence.get("limitations", [])[:5],
+        }
 
     @staticmethod
     def _stage_for_output(state: AgentState) -> str | None:

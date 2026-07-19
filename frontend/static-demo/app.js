@@ -93,8 +93,9 @@ const evaluationTraceMessages = [
   "Retrieving clinical evidence chunks...",
   "Running segmentation and depth tools inside the agent...",
   "Routing the severity model variant...",
+  "Extracting visual findings with the VLM...",
   "Simulating clinician QA checks...",
-  "Checking the draft with the wound evidence verifier...",
+  "Running diagnostic agent and evaluator loop...",
   "Preparing the final agent report...",
 ];
 
@@ -441,6 +442,17 @@ function traceOutputLine(step) {
   }
   if (step.tool === "verify_assessment") {
     return output.result || output.flag || "Verification complete";
+  }
+  if (step.tool === "extract_visual_evidence") {
+    return output.vlm_used
+      ? `${(output.findings || []).length} visual findings extracted`
+      : (output.limitations || ["VLM unavailable"])[0];
+  }
+  if (step.tool === "diagnostic_agent") {
+    return `${output.severity_stage || "No stage"} proposal, ${(output.uncertainties || []).length} uncertainties`;
+  }
+  if (step.tool === "evaluator") {
+    return output.reasoning || output.flag || output.result || "Evaluator complete";
   }
   if (step.tool === "retrieve_docs") {
     return `${(output.chunks || []).length} evidence chunks`;

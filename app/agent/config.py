@@ -44,6 +44,8 @@ class AgentConfig:
     severity_threshold: float
     timeout_seconds: int
     use_simulated_qa: bool
+    vision_model: str = "gpt-4o"
+    evaluation_model: str = "gpt-4o"
 
     @classmethod
     def from_env(cls) -> "AgentConfig":
@@ -52,6 +54,11 @@ class AgentConfig:
             model_provider=os.getenv("AGENT_MODEL_PROVIDER", "openai"),
             agent_model=os.getenv("AGENT_MODEL", "gpt-4o"),
             verifier_model=os.getenv("VERIFIER_MODEL", "gpt-4o"),
+            vision_model=os.getenv("VISION_MODEL", os.getenv("AGENT_MODEL", "gpt-4o")),
+            evaluation_model=os.getenv(
+                "EVALUATION_MODEL",
+                os.getenv("VERIFIER_MODEL", "gpt-4o"),
+            ),
             embedding_model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
             literature_backend=os.getenv("LITERATURE_RETRIEVAL_BACKEND", "pubmed_mcp"),
             pubmed_mcp_project_path=Path(

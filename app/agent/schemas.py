@@ -20,6 +20,9 @@ class VerifierResult(BaseModel):
     result: VerifierStatus
     citation: str | None = None
     flag: str | None = None
+    needs_more_evidence: bool = False
+    followup_query: str | None = None
+    reasoning: str | None = None
 
 
 class QAExchange(BaseModel):
@@ -44,6 +47,8 @@ class ClinicalOutput(BaseModel):
     verifier_result: VerifierStatus
     citation: str | None = None
     flags: list[str] = Field(default_factory=list)
+    visual_evidence: dict[str, Any] = Field(default_factory=dict)
+    evaluation_summary: dict[str, Any] = Field(default_factory=dict)
     qa_exchanges: list[QAExchange] = Field(default_factory=list)
     agent_trace: list[AgentTraceStep] = Field(default_factory=list)
     model_variant_used: str | None = None

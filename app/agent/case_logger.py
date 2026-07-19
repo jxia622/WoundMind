@@ -32,6 +32,8 @@ class CaseArtifactLogger:
                 "condition_policy": state.condition_policy,
                 "tool_plan": state.tool_plan,
                 "severity": state.severity_result,
+                "visual_evidence": state.visual_evidence,
+                "evaluation_summary": state.evaluation_summary,
                 "selected_mask": state.selected_mask,
             },
         )

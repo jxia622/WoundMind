@@ -22,8 +22,10 @@ class AgentState:
     condition_policy: dict[str, Any] | None = None
     tool_plan: dict[str, Any] | None = None
     severity_result: dict[str, Any] | None = None
+    visual_evidence: dict[str, Any] | None = None
     qa_history: list[QAExchange] = field(default_factory=list)
     draft_assessment: dict[str, Any] | None = None
+    evaluation_summary: dict[str, Any] | None = None
     verifier_result: VerifierResult | None = None
     trace: list[AgentTraceStep] = field(default_factory=list)
     iteration_count: int = 0

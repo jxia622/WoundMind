@@ -190,6 +190,9 @@ def test_agent_analyze_dfu_condition_override_runs_full_tool_plan(monkeypatch, t
     assert "override_condition" in trace_tools
     assert "segment_wound" in trace_tools
     assert "depth_map" in trace_tools
+    assert "extract_visual_evidence" in trace_tools
+    assert "diagnostic_agent" in trace_tools
+    assert "evaluator" in trace_tools
     assert len(fake_pipeline.segmentation_model.calls) == 1
     assert len(fake_pipeline.depth_model.calls) == 1
 
@@ -242,3 +245,8 @@ def test_agent_analyze_without_openai_key_uses_deterministic_verifier_fallback(m
     assert output["verifier_result"] == "PASS"
     assert output["citation"] is not None
     assert "Deterministic local verifier used because OPENAI_API_KEY is not set." in output["flags"]
+    assert output["visual_evidence"]["vlm_used"] is False
+    trace_tools = [step["tool"] for step in output["agent_trace"]]
+    assert "extract_visual_evidence" in trace_tools
+    assert "diagnostic_agent" in trace_tools
+    assert "evaluator" in trace_tools

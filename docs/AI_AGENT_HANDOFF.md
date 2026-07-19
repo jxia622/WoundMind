@@ -129,7 +129,7 @@ The static browser UI is intentionally a one-way workflow:
 5. If condition is DFU or pressure injury, generate segmentation and depth.
 6. Show light-blue mask overlay on the original image beside the relative depth map.
 7. User clicks `Run full agent evaluation`.
-8. Agent traces tool calls, retrieves PubMed evidence, runs severity model, verifies assessment, and returns a final report or escalation.
+8. Agent traces tool calls, retrieves PubMed evidence, runs severity model, extracts VLM visual evidence, runs a diagnostic-agent/evaluator loop, and returns a final report or escalation.
 
 For non-DFU/non-pressure-injury conditions, the UI stops after classification because downstream condition-specific severity tools are not built yet.
 
@@ -148,10 +148,12 @@ FastAPI and model pipeline:
 Agent layer:
 
 - `app/routers/agent_router.py`: `POST /agent/analyze`, parses image/context/condition override.
-- `app/agent/brain.py`: current WoundMind agent sequence, trace building, policy lookup, tool execution, severity draft, verifier, case artifact write.
+- `app/agent/brain.py`: current WoundMind agent sequence, trace building, policy lookup, tool execution, visual extraction, severity draft, evaluator loop, case artifact write.
 - `app/agent/tools.py`: tool facade for segmentation, depth, condition classification, severity, PubMed retrieval, simulated clinician Q&A.
 - `app/agent/pubmed_mcp.py`: PubMed clinical MCP stdio adapter. Runtime evidence retrieval should go through this by default.
-- `app/agent/verifier.py`: OpenAI-backed verifier when `OPENAI_API_KEY` exists; deterministic fallback when no key.
+- `app/agent/vision.py`: OpenAI vision extractor for visible wound findings.
+- `app/agent/evaluation.py`: diagnostic-agent/evaluator loop. The evaluator can request follow-up PubMed retrieval.
+- `app/agent/verifier.py`: older single-call verifier module retained for compatibility, but the current full-agent path uses `app/agent/evaluation.py`.
 - `app/agent/tool_policy.py`: condition policy loading and runtime tool plan construction.
 - `app/agent/condition_policy_registry.json`: source of truth for condition-specific required tools and policy metadata.
 - `app/agent/memory.py`: optional local Chroma/JSON clinical-doc fallback. Do not use unless backend is explicitly `local`.
@@ -256,13 +258,13 @@ Prioritize these before broad refactors:
    - Include citation metadata in a structured field instead of only embedding it in `DocumentChunk.text`.
    - Avoid suppressing severity purely because PubMed abstracts are underspecified; the UI should explain evidence insufficiency clearly.
 
-3. Build the VLM visual evidence extraction step.
-   - README system design says "VLM extracts visual evidence"; current code does not actually call a VLM for findings.
-   - Candidate output fields: visible depth cues, exposed tendon/bone, necrosis/gangrene, erythema/infection signs, image-quality caveats.
+3. Harden the VLM visual evidence extraction step.
+   - `app/agent/vision.py` now calls an OpenAI vision model with the wound image when `OPENAI_API_KEY` is configured.
+   - Next target: make visual findings more structured for exposed tendon/bone, necrosis/gangrene, infection signs, and image-quality caveats.
 
-4. Turn the agent/evaluator concept into an actual loop.
-   - Current `app/agent/brain.py` is a deterministic sequence with one verifier call.
-   - A real loop should let evaluator request better evidence, additional visual extraction, or escalation.
+4. Strengthen the agent/evaluator loop.
+   - `app/agent/evaluation.py` now alternates diagnostic-agent proposals and evaluator checks.
+   - Next target: make evaluator follow-up retrieval more condition/stage-specific and let it request additional VLM extraction when needed.
 
 5. Expand beyond DFU and pressure injury.
    - Other condition classes are classified but downstream severity tools and clinical references are mostly placeholders.

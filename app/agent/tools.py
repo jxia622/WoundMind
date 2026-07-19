@@ -6,10 +6,11 @@ from typing import Any
 import numpy as np
 from PIL import Image, ImageOps
 
-from app.agent.memory import ClinicalMemory
 from app.agent.config import AgentConfig
+from app.agent.memory import ClinicalMemory
 from app.agent.pubmed_mcp import PubMedMCPRetriever
 from app.agent.schemas import DocumentChunk
+from app.agent.vision import VisualEvidenceExtractor
 
 
 class AgentTools:
@@ -19,11 +20,15 @@ class AgentTools:
         config: AgentConfig | None = None,
         memory: ClinicalMemory | None = None,
         literature_retriever: PubMedMCPRetriever | None = None,
+        visual_evidence_extractor: VisualEvidenceExtractor | None = None,
     ) -> None:
         self.pipeline = pipeline
         self.config = config or AgentConfig.from_env()
         self.memory = memory
         self.literature_retriever = literature_retriever or PubMedMCPRetriever(self.config)
+        self.visual_evidence_extractor = visual_evidence_extractor or VisualEvidenceExtractor(
+            self.config
+        )
 
     async def segment_wound(self, image: Image.Image) -> dict[str, Any]:
         result = await asyncio.to_thread(self.pipeline.segmentation_model.predict, image)
@@ -72,6 +77,23 @@ class AgentTools:
             depth_status,
             mask,
             depth,
+        )
+
+    async def extract_visual_evidence(
+        self,
+        image: Image.Image,
+        condition: str | None,
+        stage: str | None,
+        mask_summary: dict[str, Any] | None,
+        depth_summary: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            self.visual_evidence_extractor.extract,
+            image,
+            condition=condition,
+            stage=stage,
+            mask_summary=mask_summary,
+            depth_summary=depth_summary,
         )
 
     async def retrieve_docs(
@@ -166,6 +188,10 @@ TOOL_SCHEMAS = [
     {
         "name": "predict_severity",
         "description": "Route and run DFU or PI severity ConvNeXt variants.",
+    },
+    {
+        "name": "extract_visual_evidence",
+        "description": "Run an OpenAI vision model to extract visible wound findings for agent evaluation.",
     },
     {
         "name": "retrieve_docs",

@@ -27,7 +27,7 @@ WoundMind is a research prototype. It is not a medical device and is not for cli
 | Wound localization | U-Net++ segmentation wrapper with light-blue mask overlay on the original wound image and mask-area summary |
 | Depth signal | Depth Anything V2 relative-depth wrapper shown side-by-side with the segmentation overlay |
 | Severity routing | DFU and pressure-injury severity model selection across RGB, mask, depth, and combined inputs |
-| Agent orchestration | Full diagnostic-agent run with tool planner, policy registry, retrieval, verifier, trace steps, case logger, and simulated clinician Q&A |
+| Agent orchestration | Full diagnostic-agent run with tool planner, VLM visual evidence extraction, PubMed retrieval, evaluator loop, trace steps, case logger, and simulated clinician Q&A |
 | Clinical grounding | PubMed clinical MCP retrieval by default, with an optional local index only for offline development |
 | Human review | Static browser prototype and Streamlit workflow for condition override, visual review, and final agent output inspection |
 
@@ -53,7 +53,7 @@ flowchart LR
     linkStyle 0,1,2,3,4 stroke:#94a3b8,stroke-width:2px;
 ```
 
-The core agent path is deterministic and auditable: WoundMind classifies the condition, routes condition-aware tools such as segmentation and depth, drafts candidate findings, retrieves evidence through the PubMed clinical MCP, verifies the assessment against PMID-backed literature chunks, and returns either a report or escalation recommendation.
+The core agent path is auditable: WoundMind classifies the condition, routes condition-aware tools such as segmentation and depth, extracts visual findings with an OpenAI vision model when configured, retrieves evidence through the PubMed clinical MCP, runs a diagnostic-agent/evaluator loop against PMID-backed literature chunks, and returns either a report or escalation recommendation.
 
 ### Verification Agent System Design
 
@@ -83,7 +83,7 @@ flowchart LR
     linkStyle 0,1,2,3,4,5 stroke:#94a3b8,stroke-width:2px;
 ```
 
-The verification agent uses the model's proposed condition and stage as a starting point, asks a VLM to extract visual findings, and then has the diagnostic agent and evaluator iterate until the claim is supported or flagged. At runtime, WoundMind calls the PubMed clinical MCP `search_and_fetch_pubmed` tool for external evidence; unsupported or uncertain cases are escalated instead of being presented as final diagnoses.
+The verification agent uses the model's proposed condition and stage as a starting point, asks a VLM to extract visual findings, and then has the diagnostic agent and evaluator iterate until the claim is supported, contradicted, or flagged as uncertain. At runtime, WoundMind calls the PubMed clinical MCP `search_and_fetch_pubmed` tool for external evidence; the evaluator can request targeted follow-up retrieval before the final report or escalation.
 
 ## Repository Layout
 
