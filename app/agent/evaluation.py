@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
 
 from app.agent.config import AgentConfig
 from app.agent.json_utils import parse_json_object
@@ -12,11 +12,16 @@ from app.agent.schemas import DocumentChunk, VerifierResult
 
 
 RetrieveDocsFn = Callable[[str, str | None, int], Awaitable[list[DocumentChunk]]]
+VisualFollowupFn = Callable[
+    [str, str | None, str | None, int, dict[str, Any]],
+    Awaitable[dict[str, Any]],
+]
 
 
 @dataclass
 class EvaluationLoopResult:
     draft: dict
+    visual_evidence: dict
     doc_chunks: list[DocumentChunk]
     verifier_result: VerifierResult
     summary: dict
@@ -282,8 +287,10 @@ class EvaluationAgentLoop:
         doc_chunks: list[DocumentChunk],
         condition: str | None,
         retrieve_docs: RetrieveDocsFn,
+        ask_visual_followup: VisualFollowupFn | None = None,
     ) -> EvaluationLoopResult:
         chunks = list(doc_chunks)
+        current_visual_evidence = _copy_visual_evidence(visual_evidence)
         feedback: dict | None = None
         trace_steps: list[dict] = []
         final_draft = base_draft
@@ -293,7 +300,7 @@ class EvaluationAgentLoop:
         for iteration in range(1, max_iterations + 1):
             final_draft = await self.diagnostic_agent.propose(
                 base_draft=base_draft,
-                visual_evidence=visual_evidence,
+                visual_evidence=current_visual_evidence,
                 doc_chunks=chunks,
                 evaluator_feedback=feedback,
                 iteration=iteration,
@@ -312,7 +319,7 @@ class EvaluationAgentLoop:
 
             final_result = await self.evaluator.evaluate(
                 draft=final_draft,
-                visual_evidence=visual_evidence,
+                visual_evidence=current_visual_evidence,
                 doc_chunks=chunks,
                 iteration=iteration,
             )
@@ -332,6 +339,37 @@ class EvaluationAgentLoop:
             ):
                 break
 
+            visual_followup: dict[str, Any] | None = None
+            visual_followup_added = False
+            if ask_visual_followup is not None:
+                visual_followup = await ask_visual_followup(
+                    final_result.followup_query,
+                    condition,
+                    final_draft.get("severity_stage"),
+                    iteration,
+                    current_visual_evidence,
+                )
+                current_visual_evidence = _merge_visual_followup(
+                    current_visual_evidence,
+                    question=final_result.followup_query,
+                    answer=visual_followup,
+                    iteration=iteration,
+                )
+                visual_followup_added = _has_visual_followup_answer(visual_followup)
+                trace_steps.append(
+                    {
+                        "tool": "ask_vlm_followup",
+                        "inputs_summary": {
+                            "question": final_result.followup_query,
+                            "condition": condition,
+                            "stage": final_draft.get("severity_stage"),
+                            "requested_by": "evaluator",
+                            "iteration": iteration,
+                        },
+                        "outputs_summary": _visual_followup_summary(visual_followup),
+                    }
+                )
+
             new_chunks = await retrieve_docs(final_result.followup_query, condition, 4)
             before = len(chunks)
             chunks = _dedupe_chunks([*chunks, *new_chunks])
@@ -350,11 +388,19 @@ class EvaluationAgentLoop:
                     },
                 }
             )
-            if len(chunks) == before:
+            if len(chunks) == before and not visual_followup_added:
                 final_result.needs_more_evidence = False
-                final_result.flag = final_result.flag or "Evaluator requested more evidence, but retrieval returned no new chunks."
+                final_result.flag = (
+                    final_result.flag
+                    or (
+                        "Evaluator requested more evidence, but retrieval and VLM "
+                        "follow-up returned no new evidence."
+                    )
+                )
                 break
             feedback = final_result.model_dump()
+            if visual_followup is not None:
+                feedback["visual_followup"] = _visual_followup_summary(visual_followup)
 
         summary = {
             "iterations": len([step for step in trace_steps if step["tool"] == "evaluator"]),
@@ -362,9 +408,15 @@ class EvaluationAgentLoop:
             "needs_more_evidence": final_result.needs_more_evidence,
             "final_reasoning": final_result.reasoning,
             "evidence_chunks": len(chunks),
+            "visual_followups": len(
+                current_visual_evidence.get("focused_followups", [])
+                if isinstance(current_visual_evidence.get("focused_followups"), list)
+                else []
+            ),
         }
         return EvaluationLoopResult(
             draft=final_draft,
+            visual_evidence=current_visual_evidence,
             doc_chunks=chunks,
             verifier_result=final_result,
             summary=summary,
@@ -391,6 +443,82 @@ def _draft_summary(draft: dict) -> dict:
         "visual_findings_used": draft.get("visual_findings_used", []),
         "uncertainties": draft.get("uncertainties", []),
         "next_evidence_query": draft.get("next_evidence_query"),
+    }
+
+
+def _copy_visual_evidence(visual_evidence: dict) -> dict:
+    try:
+        return json.loads(json.dumps(visual_evidence))
+    except TypeError:
+        return dict(visual_evidence)
+
+
+def _merge_visual_followup(
+    visual_evidence: dict,
+    *,
+    question: str,
+    answer: dict[str, Any] | None,
+    iteration: int,
+) -> dict:
+    merged = _copy_visual_evidence(visual_evidence)
+    followups = merged.get("focused_followups")
+    if not isinstance(followups, list):
+        followups = []
+    followup = {
+        "iteration": iteration,
+        "question": question,
+        **(answer or {}),
+    }
+    followups.append(followup)
+    merged["focused_followups"] = followups
+
+    if answer:
+        findings = answer.get("findings")
+        if isinstance(findings, list) and findings:
+            existing_findings = (
+                merged.get("findings") if isinstance(merged.get("findings"), list) else []
+            )
+            merged["findings"] = [*existing_findings, *findings]
+            existing_observations = (
+                merged.get("staging_relevant_observations")
+                if isinstance(merged.get("staging_relevant_observations"), list)
+                else []
+            )
+            merged["staging_relevant_observations"] = [*existing_observations, *findings]
+        limitations = answer.get("limitations")
+        if isinstance(limitations, list) and limitations:
+            existing_limitations = (
+                merged.get("limitations")
+                if isinstance(merged.get("limitations"), list)
+                else []
+            )
+            merged["limitations"] = [*existing_limitations, *limitations]
+    return merged
+
+
+def _has_visual_followup_answer(answer: dict[str, Any] | None) -> bool:
+    if not answer:
+        return False
+    if answer.get("answer"):
+        return True
+    findings = answer.get("findings")
+    return isinstance(findings, list) and len(findings) > 0
+
+
+def _visual_followup_summary(answer: dict[str, Any] | None) -> dict:
+    if not answer:
+        return {"answered": False}
+    findings = answer.get("findings") if isinstance(answer.get("findings"), list) else []
+    limitations = answer.get("limitations") if isinstance(answer.get("limitations"), list) else []
+    return {
+        "vlm_used": answer.get("vlm_used", False),
+        "source": answer.get("source"),
+        "model": answer.get("model"),
+        "question": answer.get("question"),
+        "answer": answer.get("answer"),
+        "findings": findings[:5],
+        "limitations": limitations[:3],
+        "answered": _has_visual_followup_answer(answer),
     }
 
 

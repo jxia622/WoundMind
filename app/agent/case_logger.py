@@ -45,6 +45,10 @@ class CaseArtifactLogger:
             case_dir / "verifier_output.json",
             state.verifier_result.model_dump() if state.verifier_result else None,
         )
+        self._write_json(
+            case_dir / "evaluation_output.json",
+            state.evaluation_summary,
+        )
         self._write_json(case_dir / "clinical_output.json", output.model_dump())
         return case_dir
 

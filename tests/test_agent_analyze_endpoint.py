@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -191,15 +192,23 @@ def test_agent_analyze_dfu_condition_override_runs_full_tool_plan(monkeypatch, t
     assert "segment_wound" in trace_tools
     assert "depth_map" in trace_tools
     assert "extract_visual_evidence" in trace_tools
-    assert "diagnostic_agent" in trace_tools
-    assert "evaluator" in trace_tools
+    assert "prepare_evaluation_state" in trace_tools
+    assert "initial_verbalizer" in trace_tools
+    assert "blinded_orchestrator" in trace_tools
+    assert "commit_independent_assessment" in trace_tools
+    assert "reveal_model_output" in trace_tools
+    assert "comparison_adjudication" in trace_tools
     assert len(fake_pipeline.segmentation_model.calls) == 1
     assert len(fake_pipeline.depth_model.calls) == 1
 
     assert len(FakePubMedMCPRetriever.instances) == 1
     retriever = FakePubMedMCPRetriever.instances[0]
-    assert len(retriever.calls) == 2  # initial policy query + verification query
-    assert payload["retrieved_chunks"][0]["doc_id"] == "PMID:999999"
+    assert retriever.calls == []
+    assert payload["retrieved_chunks"] == []
+    assert output["evaluation_summary"]["final_evaluation"]["status"] == (
+        "INSUFFICIENT_EVIDENCE"
+    )
+    assert (Path(output["artifact_path"]) / "evaluation_output.json").exists()
 
 
 def test_agent_analyze_non_dfu_pi_condition_stops_after_classification(monkeypatch, tmp_path):
@@ -242,11 +251,17 @@ def test_agent_analyze_without_openai_key_uses_deterministic_verifier_fallback(m
 
     assert response.status_code == 200
     output = response.json()["output"]
-    assert output["verifier_result"] == "PASS"
-    assert output["citation"] is not None
-    assert "Deterministic local verifier used because OPENAI_API_KEY is not set." in output["flags"]
+    assert output["verifier_result"] == "UNCERTAIN"
+    assert output["severity_stage"] == "Grade 3"
+    assert output["citation"] is None
+    assert output["evaluation_summary"]["final_evaluation"]["status"] == (
+        "INSUFFICIENT_EVIDENCE"
+    )
+    assert any("INSUFFICIENT_EVIDENCE" in flag for flag in output["flags"])
     assert output["visual_evidence"]["vlm_used"] is False
     trace_tools = [step["tool"] for step in output["agent_trace"]]
     assert "extract_visual_evidence" in trace_tools
-    assert "diagnostic_agent" in trace_tools
-    assert "evaluator" in trace_tools
+    assert "commit_independent_assessment" in trace_tools
+    assert trace_tools.index("commit_independent_assessment") < trace_tools.index(
+        "reveal_model_output"
+    )

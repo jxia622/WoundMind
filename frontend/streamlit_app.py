@@ -222,7 +222,10 @@ def render_header() -> None:
     left, right = st.columns([0.72, 0.28], vertical_alignment="center")
     with left:
         st.title("WoundMind")
-        st.caption("Human-in-the-loop diagnostic assistant for wound image assessment.")
+        st.caption(
+            "Human review of deterministic wound outputs; blinded evaluation is available "
+            "through the agent analysis workflow."
+        )
     with right:
         st.session_state["api_url"] = st.text_input(
             "FastAPI server",

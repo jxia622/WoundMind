@@ -8,6 +8,9 @@ from pathlib import Path
 from app.config import PROJECT_ROOT
 
 
+MAX_EVALUATION_ITERATIONS = 5
+
+
 def load_project_env(path: Path | None = None) -> None:
     env_path = path or PROJECT_ROOT / ".env"
     if not env_path.exists():
@@ -46,6 +49,10 @@ class AgentConfig:
     use_simulated_qa: bool
     vision_model: str = "gpt-4o"
     evaluation_model: str = "gpt-4o"
+    max_evaluation_iterations: int = MAX_EVALUATION_ITERATIONS
+    pubagent_project_path: Path = PROJECT_ROOT.parent.parent / "research_agent"
+    pubagent_max_iterations: int = 2
+    pubagent_per_source_limit: int = 8
 
     @classmethod
     def from_env(cls) -> "AgentConfig":
@@ -85,6 +92,32 @@ class AgentConfig:
             timeout_seconds=int(os.getenv("AGENT_TIMEOUT_SECONDS", "120")),
             use_simulated_qa=os.getenv("AGENT_SIMULATED_QA", "true").lower()
             in {"1", "true", "yes", "on"},
+            max_evaluation_iterations=min(
+                MAX_EVALUATION_ITERATIONS,
+                max(
+                    1,
+                    int(
+                        os.getenv(
+                            "MAX_EVALUATION_ITERATIONS",
+                            str(MAX_EVALUATION_ITERATIONS),
+                        )
+                    ),
+                ),
+            ),
+            pubagent_project_path=Path(
+                os.getenv(
+                    "PUBAGENT_PROJECT_PATH",
+                    str(PROJECT_ROOT.parent.parent / "research_agent"),
+                )
+            ),
+            pubagent_max_iterations=max(
+                1,
+                int(os.getenv("PUBAGENT_MAX_ITERATIONS", "2")),
+            ),
+            pubagent_per_source_limit=max(
+                1,
+                int(os.getenv("PUBAGENT_PER_SOURCE_LIMIT", "8")),
+            ),
         )
 
     @property
