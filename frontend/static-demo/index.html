@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="WoundMind wound analysis assistant frontend"
+      content="WoundMind deterministic wound staging with blinded LangGraph evaluation"
     />
     <title>WoundMind analysis assistant</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,7 +18,7 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"
     />
-    <link rel="stylesheet" href="styles.css?v=20260713-5" />
+    <link rel="stylesheet" href="styles.css?v=20260731-1" />
   </head>
   <body>
     <main class="prototype-shell" id="app">
@@ -28,7 +28,7 @@
         <header class="top-bar">
           <div class="top-bar-context">
             <span class="logo-chip">WoundMind</span>
-            <span class="patient-context">Diagnostic assistant workspace</span>
+            <span class="patient-context">Blinded evaluation</span>
           </div>
           <span class="api-status" id="api-status">
             <span class="api-status-dot"></span>
@@ -42,9 +42,9 @@
               <p class="section-label">Wound image</p>
               <strong class="upload-title">Upload an image to begin</strong>
               <p class="upload-description">
-                WoundMind verifies image quality, classifies the condition, then
-                continues to segmentation, depth, and evidence verification when
-                DFU or pressure injury routing is available.
+                WoundMind completes deterministic condition and severity inference,
+                then independently evaluates the wound through a blinded, auditable
+                LangGraph workflow.
               </p>
             </div>
             <div class="upload-actions">
@@ -97,8 +97,9 @@
             <aside class="notice notice-info" id="condition-stop" hidden>
               <i class="ti ti-info-circle" aria-hidden="true"></i>
               <span>
-                The downstream severity and evidence-verification workflow is
-                currently implemented for diabetic foot ulcer and pressure injury.
+                Downstream severity staging is currently implemented for diabetic
+                foot ulcer and pressure injury. The evaluator does not invent a stage
+                when deterministic staging is unavailable.
               </span>
             </aside>
           </article>
@@ -167,15 +168,15 @@
               type="button"
             >
               <i class="ti ti-stethoscope" aria-hidden="true"></i>
-              Run full agent evaluation
+              Run blinded evaluation
             </button>
           </article>
 
           <article class="card evaluation-card" id="evaluation-card" hidden>
-            <p class="section-label">Full diagnostic agent</p>
+            <p class="section-label">Blinded evaluation graph</p>
             <div class="active-trace-line evaluation-trace-line">
               <span class="spinner" id="evaluation-spinner" aria-hidden="true"></span>
-              <span id="evaluation-trace-text">Awaiting full agent run...</span>
+              <span id="evaluation-trace-text">Awaiting blinded evaluation...</span>
             </div>
             <ol class="workflow-timeline agent-trace" id="agent-trace-list"></ol>
           </article>
@@ -204,7 +205,7 @@
             </article>
 
             <article class="card report-card">
-              <p class="section-label">Brief agent report</p>
+              <p class="section-label">Brief evaluation report</p>
               <p class="report-text" id="brief-report"></p>
               <dl class="meta-list meta-list-spaced">
                 <div class="meta-row">
@@ -212,7 +213,7 @@
                   <dd id="agent-case-id">-</dd>
                 </div>
                 <div class="meta-row">
-                  <dt>Verifier</dt>
+                  <dt>Evaluation disposition</dt>
                   <dd id="verifier-result">-</dd>
                 </div>
                 <div class="meta-row">
@@ -224,7 +225,7 @@
                   <dd id="agent-trace-count">-</dd>
                 </div>
                 <div class="meta-row">
-                  <dt>Retrieved evidence chunks</dt>
+                  <dt>PubAgent evidence excerpts</dt>
                   <dd id="agent-evidence-count">-</dd>
                 </div>
                 <div class="meta-row">
@@ -251,6 +252,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260713-5"></script>
+    <script src="app.js?v=20260731-1"></script>
   </body>
 </html>

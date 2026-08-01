@@ -17,13 +17,13 @@ flowchart TB
 
     Agent --> Tools["AgentTools"]
     Agent --> Policy["condition_policy_registry.json"]
-    Agent --> Memory["ClinicalMemory"]
-    Agent --> Verifier["AssessmentVerifier"]
+    Agent --> Evaluation["Blinded LangGraph evaluation"]
     Agent --> Logger["CaseArtifactLogger"]
 
     Tools --> Pipeline
-    Memory --> Index["chroma_db/wound_clinical_docs.json"]
-    Memory --> Docs["clinical_docs/"]
+    Evaluation --> Verbalizer["Initial / targeted Verbalizer"]
+    Evaluation --> PubAgent["Existing PubAgent"]
+    Evaluation --> Adjudicator["Post-reveal adjudicator"]
 ```
 
 ## Runtime Flow
@@ -41,13 +41,13 @@ flowchart TB
     I --> J["Render depth map beside depth legend"]
     H --> K["Run WoundMindAgent"]
     J --> K
-    K --> L["Load condition policy and tool plan"]
-    L --> M["Retrieve evidence chunks"]
-    M --> N["Run required tools through AgentTools"]
-    N --> O["Route severity model"]
-    O --> P["Simulated clinician Q&A"]
-    P --> Q["Verify draft staging against evidence"]
-    Q --> R["Return final report, probabilities, trace, evidence count, artifact path"]
+    K --> L["Load condition policy and run required tools"]
+    L --> M["Complete deterministic condition + severity output"]
+    M --> N["Prepare blinded evidence state"]
+    N --> O["Verbalizer + bounded Orchestrator loop"]
+    O --> P["Commit independent assessment"]
+    P --> Q["Reveal deterministic result"]
+    Q --> R["Compare and return disposition + audit trace"]
 ```
 
 1. The API loads `WoundAnalysisPipeline` at startup.
@@ -56,20 +56,21 @@ flowchart TB
 4. The static demo exposes the condition as a dropdown so a reviewer can override the model label before downstream routing.
 5. DFU and pressure-injury routes continue to segmentation, depth, severity routing, and agent evaluation; unsupported conditions stop after classification.
 6. Segmentation is shown as a light-blue overlay on the original wound image; the relative depth map is shown beside the depth legend.
-7. The agent loads the condition policy, builds a tool plan, retrieves local reference chunks, runs tool-backed severity inference, simulates context-driven Q&A, and verifies the draft stage.
-8. The final response includes staging, probabilities, a brief report, verifier result, trace metadata, retrieved evidence count, and local artifact path.
+7. After deterministic inference completes, the evaluator receives only wound evidence. Structured Orchestrator actions can ask the Verbalizer for case-specific facts or the existing PubAgent for clinical evidence.
+8. The evaluator commits and locks its independent assessment before the deterministic condition, stage, and confidence are revealed.
+9. Adjudication returns `SUPPORTED`, `FLAGGED`, or `INSUFFICIENT_EVIDENCE`; the full graph state is checkpointed in process and its audit record is persisted with the case artifact.
 
 ## Agent Boundary
 
 The current agent layer is deliberately conservative:
 
-- It can run without an LLM key.
+- It can run without an LLM key, in which case the independent result is conservatively `INSUFFICIENT_EVIDENCE`.
 - Tool execution remains deterministic and auditable.
-- Clinical references are retrieved from local indexed documents.
+- Clinical-literature questions are delegated only to the existing PubAgent interface.
 - The simulated Q&A helper only answers from provided context.
 - Conditions outside the currently implemented DFU/pressure-injury severity routes are not forced through unsupported staging tools.
 
-OpenAI-backed brain and verifier paths are configurable through `.env`, but the core workflow does not depend on them for basic local operation.
+OpenAI-backed Verbalizer, Orchestrator, and adjudicator calls use schema-enforced outputs. Blinded contexts have no model-result fields, and the independent-assessment digest is checked after reveal. See [EVALUATION_ARCHITECTURE.md](EVALUATION_ARCHITECTURE.md).
 
 ## Model Artifacts
 

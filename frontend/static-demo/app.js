@@ -88,15 +88,14 @@ const workflowSteps = {
 };
 
 const evaluationTraceMessages = [
-  "Starting full diagnostic agent...",
-  "Loading condition-specific tool policy...",
-  "Retrieving clinical evidence chunks...",
-  "Running segmentation and depth tools inside the agent...",
-  "Routing the severity model variant...",
-  "Extracting visual findings with the VLM...",
-  "Simulating clinician QA checks...",
-  "Running diagnostic agent and evaluator loop...",
-  "Preparing the final agent report...",
+  "Preparing blinded wound evidence...",
+  "Creating the initial grounded wound description...",
+  "Running the blinded orchestrator...",
+  "Requesting targeted wound or PubAgent evidence...",
+  "Committing the independent assessment...",
+  "Revealing the deterministic model output...",
+  "Comparing the locked assessments...",
+  "Preparing the auditable evaluation result...",
 ];
 
 const fileInput = document.querySelector("#image-upload");
@@ -448,6 +447,38 @@ function traceOutputLine(step) {
       ? `${(output.findings || []).length} visual findings extracted`
       : (output.limitations || ["VLM unavailable"])[0];
   }
+  if (step.tool === "prepare_evaluation_state") {
+    return output.blinding_active
+      ? `${(output.case_evidence_fields || []).length} blinded evidence groups prepared`
+      : "Evaluation state prepared";
+  }
+  if (step.tool === "initial_verbalizer") {
+    return output.description || "Initial wound description complete";
+  }
+  if (step.tool === "blinded_orchestrator") {
+    return output.rationale || input.route || "Blinded action selected";
+  }
+  if (step.tool === "targeted_verbalizer") {
+    return output.answer || output.unavailable_reason || "Targeted wound answer recorded";
+  }
+  if (step.tool === "pubagent") {
+    return output.summary || output.error || "Clinical evidence recorded";
+  }
+  if (step.tool === "commit_independent_assessment") {
+    const assessment = output.assessment || {};
+    return `${assessment.condition || "Unresolved condition"}, ${assessment.stage || "unresolved stage"} locked`;
+  }
+  if (step.tool === "reveal_model_output") {
+    return output.revealed_after_commit
+      ? "Deterministic result revealed after independent commit"
+      : "Model result revealed";
+  }
+  if (step.tool === "comparison_adjudication") {
+    return output.final_evaluation?.status || "Assessment comparison complete";
+  }
+  if (step.tool === "finalize_evaluation") {
+    return output.status || "Evaluation finalized";
+  }
   if (step.tool === "diagnostic_agent") {
     return `${output.severity_stage || "No stage"} proposal, ${(output.uncertainties || []).length} uncertainties`;
   }
@@ -492,14 +523,19 @@ function renderAgentTrace(trace = []) {
 }
 
 function briefReport(output, severity) {
-  const stage = output.severity_stage || severity?.severity_prediction || "No verified stage";
+  const stage = output.severity_stage || severity?.severity_prediction || "no available stage";
   const condition = prettyCondition(output.condition || selectedCondition() || "condition");
   const confidence = output.severity_confidence ?? severity?.severity_confidence;
-  const verifier = output.verifier_result || "UNCERTAIN";
   const modelVariant = output.model_variant_used || severity?.model_used;
   const modelLine = modelVariant ? ` using ${modelVariant}` : "";
-  const qaCount = output.qa_exchanges?.length || 0;
-  return `${condition} was routed through the full agent workflow${modelLine}. The agent drafted ${stage} with ${formatPercent(confidence)} severity confidence, simulated ${qaCount} clinician QA checks, and the evidence verifier returned ${verifier}.`;
+  const evaluation = output.evaluation_summary || {};
+  const independent = evaluation.independent_evaluation || {};
+  const finalEvaluation = evaluation.final_evaluation || {};
+  const independentAssessment = independent.condition
+    ? `${prettyCondition(independent.condition)}${independent.stage ? `, ${independent.stage}` : ""}`
+    : "insufficient evidence for an independent condition";
+  const disposition = finalEvaluation.status || output.verifier_result || "INSUFFICIENT_EVIDENCE";
+  return `The deterministic pipeline returned ${condition}, ${stage} at ${formatPercent(confidence)} confidence${modelLine}. The blinded evaluator committed ${independentAssessment} before reveal, then returned ${disposition}.`;
 }
 
 function renderFinalResult(agentPayload) {
@@ -507,6 +543,8 @@ function renderFinalResult(agentPayload) {
   const severity = state.severity || {};
   const conditionLabel = prettyCondition(output.condition || selectedCondition() || "Condition");
   const stage = output.severity_stage || severity.severity_prediction || "Not verified";
+  const evaluation = output.evaluation_summary || {};
+  const finalEvaluation = evaluation.final_evaluation || {};
   const displayedStage = /pressure injury/i.test(conditionLabel)
     ? pressureInjuryStageLabels[stage] || stage
     : stage;
@@ -514,19 +552,23 @@ function renderFinalResult(agentPayload) {
   document.querySelector("#final-condition-label").textContent = conditionLabel;
   document.querySelector("#severity-label").textContent = displayedStage;
   document.querySelector("#severity-description").textContent =
-    severityDescriptions[stage] || "Evidence verifier completed.";
+    severityDescriptions[stage] || "Deterministic model output available for review.";
   setConfidence(confidenceLevel(output.severity_confidence ?? severity.severity_confidence ?? 0));
   renderSeverityProbabilities(severity, conditionLabel);
 
   document.querySelector("#brief-report").textContent = briefReport(output, severity);
   document.querySelector("#agent-case-id").textContent = agentPayload.case_id || output.case_id || "-";
-  document.querySelector("#verifier-result").textContent = output.verifier_result || "-";
+  document.querySelector("#verifier-result").textContent =
+    finalEvaluation.status || output.verifier_result || "-";
   document.querySelector("#model-variant").textContent =
     output.model_variant_used || severity.model_used || "-";
   document.querySelector("#agent-trace-count").textContent =
     String(output.agent_trace?.length || 0);
-  document.querySelector("#agent-evidence-count").textContent =
-    String(agentPayload.retrieved_chunks?.length || 0);
+  const pubAgentEvidenceCount = (evaluation.pubagent_history || []).reduce(
+    (count, response) => count + (response.evidence?.length || 0),
+    0,
+  );
+  document.querySelector("#agent-evidence-count").textContent = String(pubAgentEvidenceCount);
   document.querySelector("#agent-artifact-path").textContent = output.artifact_path || "-";
 
   document.querySelector("#verifier-citation-text").textContent = output.citation || "";
@@ -663,7 +705,7 @@ async function continueToEvaluation() {
     window.clearInterval(state.evaluationTimer);
     state.evaluationTimer = null;
     document.querySelector("#evaluation-trace-text").textContent =
-      "Full agent run complete.";
+      "Blinded evaluation complete.";
     renderAgentTrace(state.agent.output?.agent_trace || []);
     renderFinalResult(state.agent);
     setApiStatus("online", "API connected");

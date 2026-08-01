@@ -96,6 +96,28 @@ class AgentTools:
             depth_summary=depth_summary,
         )
 
+    async def answer_visual_followup(
+        self,
+        image: Image.Image,
+        *,
+        question: str,
+        condition: str | None,
+        stage: str | None,
+        current_visual_evidence: dict[str, Any] | None,
+        mask_summary: dict[str, Any] | None,
+        depth_summary: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            self.visual_evidence_extractor.answer_followup,
+            image,
+            question=question,
+            condition=condition,
+            stage=stage,
+            current_visual_evidence=current_visual_evidence,
+            mask_summary=mask_summary,
+            depth_summary=depth_summary,
+        )
+
     async def retrieve_docs(
         self,
         query: str,
@@ -192,6 +214,13 @@ TOOL_SCHEMAS = [
     {
         "name": "extract_visual_evidence",
         "description": "Run an OpenAI vision model to extract visible wound findings for agent evaluation.",
+    },
+    {
+        "name": "answer_visual_followup",
+        "description": (
+            "Ask the OpenAI vision model a targeted evaluator follow-up question "
+            "about the wound image."
+        ),
     },
     {
         "name": "retrieve_docs",

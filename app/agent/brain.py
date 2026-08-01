@@ -6,12 +6,16 @@ from PIL import Image
 
 from app.agent.case_logger import CaseArtifactLogger
 from app.agent.config import AgentConfig
-from app.agent.evaluation import EvaluationAgentLoop
 from app.agent.memory import ClinicalMemory
-from app.agent.schemas import AgentAnalyzeResponse, ClinicalOutput, QAExchange
+from app.agent.schemas import (
+    AgentAnalyzeResponse,
+    ClinicalOutput,
+    DocumentChunk,
+    QAExchange,
+    VerifierResult,
+)
 from app.agent.state import AgentState
 from app.agent.tool_policy import (
-    build_policy_retrieval_query,
     build_tool_plan,
     get_condition_policy,
     load_condition_policy_registry,
@@ -20,6 +24,10 @@ from app.agent.tool_policy import (
 )
 from app.agent.tools import AgentTools
 from app.config import DISCLAIMER
+from app.evaluation import EvaluationWorkflow
+from app.evaluation.nodes.preparation import scrub_blinded_evidence
+from app.evaluation.pubagent import PubAgentAdapter
+from app.evaluation.verbalizer import EvaluationVerbalizer
 
 
 class WoundMindAgent:
@@ -43,7 +51,6 @@ class WoundMindAgent:
             ClinicalMemory(self.config) if self.config.literature_backend == "local" else None
         )
         self.tools = AgentTools(pipeline=pipeline, config=self.config, memory=self.memory)
-        self.evaluation_loop = EvaluationAgentLoop(self.config)
         self.case_logger = CaseArtifactLogger(self.config)
         self.policy_registry = load_condition_policy_registry()
 
@@ -92,23 +99,6 @@ class WoundMindAgent:
             "load_condition_policy",
             {"condition": condition},
             summarize_tool_plan(state.tool_plan),
-        )
-
-        allowed_doc_ids = state.condition_policy.get("clinical_doc_ids", [])
-        initial_query = build_policy_retrieval_query(state.condition_policy)
-        state.doc_chunks = await self.tools.retrieve_docs(
-            initial_query,
-            condition,
-            allowed_doc_ids=allowed_doc_ids,
-        )
-        state.add_trace(
-            "retrieve_docs",
-            {
-                "query": initial_query,
-                "condition": condition,
-                "allowed_doc_ids": allowed_doc_ids,
-            },
-            {"chunks": [chunk.model_dump(exclude={"text"}) for chunk in state.doc_chunks]},
         )
 
         planned_runtime_tools = runtime_tool_names(state.tool_plan)
@@ -170,68 +160,80 @@ class WoundMindAgent:
         )
 
         await self._maybe_ask_questions(state)
-        stage = self._stage_for_output(state)
-        state.visual_evidence = await self.tools.extract_visual_evidence(
+        blinded_mask_summary = scrub_blinded_evidence(state.mask_result or {})
+        blinded_depth_summary = scrub_blinded_evidence(state.depth_result or {})
+        visual_evidence = await self.tools.extract_visual_evidence(
             image=image,
-            condition=condition,
-            stage=stage,
-            mask_summary=state.mask_result,
-            depth_summary=state.depth_result,
+            condition=None,
+            stage=None,
+            mask_summary=blinded_mask_summary,
+            depth_summary=blinded_depth_summary,
         )
+        state.visual_evidence = scrub_blinded_evidence(visual_evidence)
         state.add_trace(
             "extract_visual_evidence",
-            {"condition": condition, "stage": stage, "image": "uploaded"},
+            {"mode": "blinded", "image": "uploaded"},
             self._visual_evidence_summary(state.visual_evidence),
         )
 
-        draft = {
-            "condition": condition,
-            "condition_confidence": condition_confidence,
-            "severity_stage": stage,
-            "severity_confidence": state.severity_result.get("severity_confidence")
-            if state.severity_result
-            else None,
-            "rationale": self._draft_rationale(state),
-            "visual_evidence": state.visual_evidence,
-        }
-        state.draft_assessment = draft
+        async def ask_blinded_visual_followup(question: str):
+            return await self.tools.answer_visual_followup(
+                image,
+                question=question,
+                condition=None,
+                stage=None,
+                current_visual_evidence=scrub_blinded_evidence(
+                    state.visual_evidence or {}
+                ),
+                mask_summary=blinded_mask_summary,
+                depth_summary=blinded_depth_summary,
+            )
 
-        verification_query = f"{condition} {stage or ''} staging criteria"
-        state.doc_chunks = await self.tools.retrieve_docs(
-            verification_query,
-            condition,
-            allowed_doc_ids=allowed_doc_ids,
+        workflow = EvaluationWorkflow(
+            self.config,
+            verbalizer=EvaluationVerbalizer(
+                self.config,
+                targeted_evidence_provider=ask_blinded_visual_followup,
+            ),
+            pubagent=PubAgentAdapter(self.config),
         )
-        state.add_trace(
-            "retrieve_docs",
-            {
-                "query": verification_query,
-                "condition": condition,
-                "allowed_doc_ids": allowed_doc_ids,
+        evaluation = await workflow.run(
+            case_id=state.case_id,
+            pipeline_output={
+                "validation": state.validation_result,
+                "condition": state.classification_result,
+                "mask": state.mask_result,
+                "depth": state.depth_result,
+                "severity": state.severity_result,
+                "visual_evidence": state.visual_evidence,
             },
-            {"chunks": [chunk.model_dump(exclude={"text"}) for chunk in state.doc_chunks]},
+            case_evidence={
+                "validation": state.validation_result or {},
+                "mask": blinded_mask_summary,
+                "depth": blinded_depth_summary,
+                "visual_evidence": state.visual_evidence or {},
+            },
         )
-
-        evaluation = await self.evaluation_loop.run(
-            base_draft=draft,
-            visual_evidence=state.visual_evidence or {},
-            doc_chunks=state.doc_chunks,
-            condition=condition,
-            retrieve_docs=self.tools.retrieve_docs,
-        )
-        state.draft_assessment = evaluation.draft
-        state.doc_chunks = evaluation.doc_chunks
-        state.verifier_result = evaluation.verifier_result
-        state.evaluation_summary = evaluation.summary
-        for step in evaluation.trace_steps:
+        state.draft_assessment = evaluation.independent_evaluation.model_dump()
+        state.evaluation_summary = evaluation.model_dump()
+        state.verifier_result = self._verifier_from_evaluation(evaluation)
+        state.doc_chunks = self._pubagent_chunks(evaluation)
+        for event in evaluation.audit_log:
             state.add_trace(
-                step["tool"],
-                step.get("inputs_summary", {}),
-                step.get("outputs_summary", {}),
+                event.node,
+                {
+                    "iteration": event.iteration,
+                    "route": event.route,
+                    "question": event.question,
+                },
+                event.details,
             )
         state.add_trace(
             "verify_assessment",
-            {"draft": state.draft_assessment, "mode": "agent_evaluator_loop"},
+            {
+                "independent_assessment": state.draft_assessment,
+                "mode": "two_pass_blinded_langgraph",
+            },
             state.verifier_result.model_dump(),
         )
 
@@ -287,20 +289,18 @@ class WoundMindAgent:
                 )
             policy_doc_ids = state.tool_plan.get("clinical_doc_ids", [])
             if policy_doc_ids and not state.doc_chunks:
-                if self.config.literature_backend == "local":
-                    flags.append(
-                        "No indexed clinical chunks matched policy document IDs: "
-                        f"{', '.join(policy_doc_ids)}."
-                    )
-                else:
-                    flags.append(
-                        "No PubMed MCP literature results were retrieved for the policy query."
-                    )
+                flags.append("No cited clinical evidence was returned by PubAgent.")
 
         stage = self._stage_for_output(state)
         if verifier and verifier.result == "UNCERTAIN":
-            stage = None
-            flags.append("Verifier returned UNCERTAIN; staging recommendation suppressed.")
+            flags.append(
+                "Independent evaluator returned INSUFFICIENT_EVIDENCE; the deterministic "
+                "model output is retained for clinician review."
+            )
+        if verifier and verifier.result == "FAIL":
+            flags.append(
+                "Independent evaluator FLAGGED a meaningful discrepancy with the deterministic output."
+            )
         if not self._is_dfu_or_pi(
             state.classification_result.get("top1_label") if state.classification_result else ""
         ):
@@ -400,6 +400,50 @@ class WoundMindAgent:
                 f"{severity.get('model_used')} returned {severity.get('severity_prediction')}."
             )
         return f"Existing model pipeline predicted {condition}; severity is not available for this condition."
+
+    @staticmethod
+    def _verifier_from_evaluation(evaluation) -> VerifierResult:
+        status = evaluation.final_evaluation.status
+        mapped = {
+            "SUPPORTED": "PASS",
+            "FLAGGED": "FAIL",
+            "INSUFFICIENT_EVIDENCE": "UNCERTAIN",
+        }[status]
+        citation = None
+        for response in evaluation.pubagent_history:
+            if response.citations:
+                source = response.citations[0]
+                citation = source.pmid or source.doi or source.url or source.title
+                if citation:
+                    break
+        return VerifierResult(
+            result=mapped,
+            citation=citation,
+            flag=None if mapped == "PASS" else evaluation.final_evaluation.rationale,
+            needs_more_evidence=False,
+            reasoning=evaluation.final_evaluation.rationale,
+        )
+
+    @staticmethod
+    def _pubagent_chunks(evaluation) -> list[DocumentChunk]:
+        chunks: list[DocumentChunk] = []
+        for response in evaluation.pubagent_history:
+            for item in response.evidence:
+                citation = item.citation
+                chunks.append(
+                    DocumentChunk(
+                        text=item.quote,
+                        source=citation.url or citation.title or "PubAgent",
+                        doc_id=(
+                            f"PMID:{citation.pmid}"
+                            if citation.pmid
+                            else citation.doi or citation.pmcid
+                        ),
+                        section=item.source_section,
+                        condition_tag="independent_evaluation",
+                    )
+                )
+        return chunks
 
     @staticmethod
     def _recommendation(state: AgentState, stage: str | None) -> str:

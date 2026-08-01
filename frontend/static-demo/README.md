@@ -3,7 +3,9 @@
 One-way wound analysis interface connected to the local FastAPI model pipeline.
 It verifies image quality, classifies the condition, allows condition override,
 shows a light-blue segmentation overlay beside the depth map, and then runs the
-full WoundMind agent evaluation for supported DFU/pressure-injury routes.
+two-pass blinded LangGraph evaluation for supported DFU/pressure-injury routes.
+The interface keeps the deterministic model result separate from the independently
+committed evaluator assessment and displays the final evaluation disposition.
 
 ## Run locally
 

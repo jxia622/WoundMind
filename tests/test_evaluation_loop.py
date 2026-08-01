@@ -20,7 +20,9 @@ class FakeDiagnosticAgent:
         evaluator_feedback,
         iteration,
     ):
-        self.calls.append((iteration, len(doc_chunks), evaluator_feedback))
+        self.calls.append(
+            (iteration, len(doc_chunks), evaluator_feedback, visual_evidence)
+        )
         return {
             **base_draft,
             "rationale": f"draft iteration {iteration}",
@@ -76,6 +78,7 @@ def test_evaluation_loop_retrieves_more_evidence_and_re_evaluates(tmp_path):
     evaluator = FakeEvaluator()
     loop = EvaluationAgentLoop(config, diagnostic_agent=diagnostic, evaluator=evaluator)
     retrieval_calls = []
+    visual_followup_calls = []
 
     async def retrieve_docs(query, condition, top_k):
         retrieval_calls.append((query, condition, top_k))
@@ -89,6 +92,20 @@ def test_evaluation_loop_retrieves_more_evidence_and_re_evaluates(tmp_path):
                 score=0.91,
             )
         ]
+
+    async def ask_visual_followup(question, condition, stage, iteration, current_visual_evidence):
+        visual_followup_calls.append(
+            (question, condition, stage, iteration, current_visual_evidence)
+        )
+        return {
+            "vlm_used": True,
+            "source": "fake_vision",
+            "model": "fake-vlm",
+            "question": question,
+            "answer": "The visible wound bed appears deep with tissue loss.",
+            "findings": ["focused VLM answer: deep tissue loss is visible"],
+            "limitations": [],
+        }
 
     result = asyncio.run(
         loop.run(
@@ -110,11 +127,13 @@ def test_evaluation_loop_retrieves_more_evidence_and_re_evaluates(tmp_path):
             ],
             condition="Diabetic_Foot_Ulcers_(DFU)",
             retrieve_docs=retrieve_docs,
+            ask_visual_followup=ask_visual_followup,
         )
     )
 
     assert result.verifier_result.result == "PASS"
     assert result.summary["iterations"] == 2
+    assert result.summary["visual_followups"] == 1
     assert retrieval_calls == [
         (
             "Wagner grade 3 diabetic foot ulcer criteria",
@@ -122,9 +141,24 @@ def test_evaluation_loop_retrieves_more_evidence_and_re_evaluates(tmp_path):
             4,
         )
     ]
+    assert len(visual_followup_calls) == 1
+    assert visual_followup_calls[0][:4] == (
+        "Wagner grade 3 diabetic foot ulcer criteria",
+        "Diabetic_Foot_Ulcers_(DFU)",
+        "Grade 3",
+        1,
+    )
+    assert result.visual_evidence["focused_followups"][0]["answer"] == (
+        "The visible wound bed appears deep with tissue loss."
+    )
+    assert (
+        "focused VLM answer: deep tissue loss is visible"
+        in diagnostic.calls[1][3]["findings"]
+    )
     assert [step["tool"] for step in result.trace_steps] == [
         "diagnostic_agent",
         "evaluator",
+        "ask_vlm_followup",
         "retrieve_docs",
         "diagnostic_agent",
         "evaluator",
